@@ -51,7 +51,7 @@ en:
     publications: "Peer-reviewed papers and theses."
     teaching: "Undergraduate modules I've lectured, in Cambodia and online."
     talks: "Conference talks, panels, and guest lectures."
-  footer: "built with minimal web components"
+  footer: "built with minimal web components — inspired by a Unix-like CLI"
 
 km:
   handle: "manith@theBeach"
@@ -93,4 +93,4 @@ km:
     publications: "ឯកសារស្រាវជ្រាវ និងនិក្ខេបបទ។"
     teaching: "មុខវិជ្ជាថ្នាក់បរិញ្ញាបត្រដែលខ្ញុំបានបង្រៀន នៅកម្ពុជា និងតាមអនឡាញ។"
     talks: "បទបង្ហាញ សន្និសីទ វេទិកាពិភាក្សា និងការបង្រៀនកិត្តិយស។"
-  footer: "បង្កើតដោយគ្រឿងផ្សំទូទៅ"
+  footer: "បង្កើតដោយគ្រឿងផ្សំទូទៅ — យកគំរូតាម Unix-like CLI"
