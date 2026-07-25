@@ -3,6 +3,9 @@
 #  Jekyll config (GitHub Pages native build — no local build step)
 # ============================================================
 
+# GitHub Pages user site: the repo name must equal the account name exactly
+# (ManithChenda -> manithchenda.github.io), which is what serves it from the
+# domain root and lets baseurl stay empty.
 url: "https://manithchenda.github.io"
 baseurl: ""
 

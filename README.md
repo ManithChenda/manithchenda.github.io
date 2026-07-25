@@ -234,7 +234,12 @@ This fixes the repo name, the URL, and one config value.
 | `baseurl:` | `""` | `"/<repo>"` |
 | Limit | one per account | any number |
 
-This site is a user site: repo `manithchenda.github.io`, `baseurl: ""`.
+`<username>.github.io` must match the account name **exactly**. Naming a repo
+`something.github.io` does not by itself make it a user site — a mismatched name is
+treated as a project site and served from `/<repo>/`.
+
+This site is a user site: account `ManithChenda`, repo `manithchenda.github.io`,
+`baseurl: ""`.
 
 ### 1. Set the site URL
 
