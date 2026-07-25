@@ -1,0 +1,96 @@
+# ============================================================
+#  UI dictionary — chrome labels + page intros
+#  Migrated verbatim from reference/strings.js (window.SITE.ui)
+#
+#  Every string exists in two languages:
+#    en = English (monospace / terminal voice)
+#    km = ភាសាខ្មែរ
+#  Keys are stable; translate values only.
+#
+#  TODO(owner): finish the Khmer copy review. Nothing in the build depends on
+#  the wording of any km value — edit them freely.
+# ============================================================
+
+en:
+  handle: "manith@theBeach"
+  name: "CHENDA Manith"
+  role: "PhD Candidate — AI-powered Machine Auditory Perception"
+  affiliation: "Laboratory for Machine Auditory Perception (L-MAP) · Dept. of Electronic & Semiconductor Engineering · Kangwon National University · South Korea"
+  bio: "Teaching machines to hear and make sense of (inaudible) sound. I come to it from a decade in hardware design, embedded systems, and robotics across Cambodia and Japan."
+  status: "open to collaboration"
+  location: "Phnom Penh · Gangneung"
+  nav:
+    about: "about"
+    blog: "blog"
+    projects: "projects"
+    publications: "publications"
+    teaching: "teaching"
+    talks: "talks"
+    bookshelf: "bookshelf"
+    viz: "viz"
+  sec:
+    education: "education"
+    experience: "experience"
+    publications: "selected publications"
+    skills: "skills & tools"
+    recent: "recent writing"
+  themeDark: "moonlight"
+  themeLight: "sunlight"
+  readPost: "read"
+  allPosts: "all posts"
+  backToBlog: "cd ../blog"
+  minRead: "min"
+  postCompareTitle: "one post, two languages"
+  postCompareNote: "The same article rendered in both stacks — JetBrains Mono for English, Noto Serif Khmer for Khmer. Note the taller line-height and looser rhythm the Khmer column is given."
+  openViz: "open ↗"
+  vizNote: "Self-contained HTML artifacts. Each opens full-screen in its own page."
+  shelfNote: "What I'm reading and re-reading. Cover on the left, a line of mine on the right."
+  pageIntro:
+    blog: "Notes on machine listening, embedded systems, and the occasional detour. Two language versions of every post."
+    projects: "Things I've built — hardware, firmware, and models. Most are open source."
+    publications: "Peer-reviewed papers and theses."
+    teaching: "Undergraduate modules I've lectured, in Cambodia and online."
+    talks: "Conference talks, panels, and guest lectures."
+  footer: "built with minimal web components"
+
+km:
+  handle: "manith@theBeach"
+  name: "ចិន្ដា ម៉ានិត"
+  role: "បេក្ខជនបណ្ឌិត — បច្ចេកវិទ្យាបញ្ញាសិប្បនិម្មិត"
+  affiliation: "មន្ទីរពិសោធន៍ស្រាវជ្រាវសោតវិញ្ញាណសម្រាប់ម៉ាស៊ីន (L-MAP) · ដេប៉ាតឺម៉ង់វិស្វកម្មអេឡិចត្រូនិក និងសឺមីកុងឌុចទ័រ · សាកលវិទ្យាល័យជាតិកាំងវ៉ុន"
+  bio: "បង្រៀនម៉ាស៊ីនឱ្យស្តាប់ ដើម្បីញែកព័ត៌មាន កំណត់ទីតាំង និងយល់អំពីសំឡេង។ ខ្ញុំចាប់ផ្ដើមស្រាវជ្រាវលើផ្នែកនេះ បន្ទាប់ពីបានសន្សំបទពិសោធន៍មួយទសវត្សរ៍ក្នុងវិស័យវិស្វកម្មអេឡិចត្រូនិក ស្វ័យប្រវត្តិកម្ម និងរ៉ូបូត នៅកម្ពុជានិងជប៉ុន។"
+  status: "ខ្ញុំអាចប្រឹក្សានិងពិភាក្សាសម្រាប់កិច្ចសហការបាន"
+  location: "ភ្នំពេញ · កាំងនឹង"
+  nav:
+    about: "អំពី"
+    blog: "ប្លុក"
+    projects: "គម្រោង"
+    publications: "អត្ថបទស្រាវជ្រាវ"
+    teaching: "ការបង្រៀន"
+    talks: "វាគ្មិន"
+    bookshelf: "សៀវភៅ"
+    viz: "គំនូសពន្យល់"
+  sec:
+    education: "ការសិក្សា"
+    experience: "បទពិសោធន៍ការងារ"
+    publications: "អត្ថបទស្រាវជ្រាវ"
+    skills: "ជំនាញ និងឧបករណ៍"
+    recent: "អត្ថបទថ្មីៗ"
+  themeDark: "ពន្លឺព្រះចន្ទ"
+  themeLight: "ពន្លឺថ្ងៃ"
+  readPost: "អាន"
+  allPosts: "អត្ថបទទាំងអស់"
+  backToBlog: "ត្រឡប់ទៅប្លុក"
+  minRead: "នាទី"
+  postCompareTitle: "អត្ថបទតែមួយ ពីរភាសា"
+  postCompareNote: "អត្ថបទដដែលបង្ហាញក្នុងពុម្ពអក្សរពីរ — JetBrains Mono សម្រាប់អង់គ្លេស និង Noto Serif Khmer សម្រាប់ខ្មែរ។ សូមកត់សម្គាល់កម្ពស់បន្ទាត់ និងចង្វាក់ដែលធូររលុងជាងសម្រាប់ជួរឈរខ្មែរ។"
+  openViz: "បើក ↗"
+  vizNote: "ស្នាដៃ HTML ឯករាជ្យ។ នីមួយៗបើកពេញអេក្រង់ក្នុងទំព័ររៀងៗខ្លួន។"
+  shelfNote: "អ្វីដែលខ្ញុំកំពុងអាន និងអានឡើងវិញ។ គម្របនៅខាងឆ្វេង ពាក្យសម្ដីរបស់ខ្ញុំនៅខាងស្តាំ។"
+  pageIntro:
+    blog: "កំណត់ចំណាំស្តីពីការស្តាប់ដោយម៉ាស៊ីន ប្រព័ន្ធបង្កប់ និងផ្លូវវាងម្តងម្កាល។ អត្ថបទនីមួយៗមានពីរភាសា។"
+    projects: "អ្វីៗដែលខ្ញុំបានបង្កើត — ផ្នែករឹង កម្មវិធីបង្កប់ និងគំរូ។ ភាគច្រើនជាប្រភពបើកចំហ។"
+    publications: "ឯកសារស្រាវជ្រាវ និងនិក្ខេបបទ។"
+    teaching: "មុខវិជ្ជាថ្នាក់បរិញ្ញាបត្រដែលខ្ញុំបានបង្រៀន នៅកម្ពុជា និងតាមអនឡាញ។"
+    talks: "បទបង្ហាញ សន្និសីទ វេទិកាពិភាក្សា និងការបង្រៀនកិត្តិយស។"
+  footer: "បង្កើតដោយគ្រឿងផ្សំទូទៅ"

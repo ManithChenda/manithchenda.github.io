@@ -1,0 +1,30 @@
+# Migrated verbatim from reference/strings.js (window.SITE.education)
+- years: "2026–now"
+  en:
+    degree: "PhD Candidate, Artificial Intelligence"
+    org: "Kangwon National University"
+    place: "KR"
+  km:
+    degree: "បណ្ឌិតផ្នែកបច្ចេកវិទ្យាបញ្ញាសិប្បនិម្មិត"
+    org: "សាកលវិទ្យាល័យជាតិកាំងវ៉ុន"
+    place: "កូរ៉េ"
+
+- years: "2019–2021"
+  en:
+    degree: "Master's Degree, Integrated Arts and Sciences"
+    org: "Kochi University"
+    place: "JP"
+  km:
+    degree: "បរិញ្ញាបត្រជាន់ខ្ពស់ផ្នែកវិទ្យាសាស្ត្រ"
+    org: "សាកលវិទ្យាល័យកូជិ"
+    place: "ជប៉ុន"
+
+- years: "2011–2016"
+  en:
+    degree: "Engineer's Degree, Electrical & Electronic Engineering"
+    org: "Institute of Technology of Cambodia"
+    place: "KH"
+  km:
+    degree: "សញ្ញាបត្រវិស្វករផ្នែកអគ្គិសនីនិងអេឡិចត្រូនិក"
+    org: "វិទ្យាស្ថានបច្ចេកវិទ្យាកម្ពុជា"
+    place: "កម្ពុជា"

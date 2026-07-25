@@ -1,0 +1,24 @@
+# Migrated verbatim from reference/strings.js (window.SITE.talks)
+- date: "2025-11"
+  en:
+    title: "What Machines Miss When They Listen"
+    event: "Panel · Cambodia AI Forum, Phnom Penh"
+  km:
+    title: "អ្វីដែលម៉ាស៊ីនខកខាននៅពេលវាស្តាប់"
+    event: "វេទិកា · វេទិកា AI កម្ពុជា ភ្នំពេញ"
+
+- date: "2025-06"
+  en:
+    title: "From Firmware to Foundation Models"
+    event: "Guest lecture · Kangwon National University"
+  km:
+    title: "ពី Firmware ទៅ Foundation Models"
+    event: "បង្រៀនកិត្តិយស · សាកលវិទ្យាល័យជាតិកាំងវ៉ុន"
+
+- date: "2024-09"
+  en:
+    title: "Building Hardware in Cambodia"
+    event: "Talk · FabLab-ITC Open Day"
+  km:
+    title: "ការបង្កើតផ្នែករឹងនៅកម្ពុជា"
+    event: "បទបង្ហាញ · ថ្ងៃបើកចំហ FabLab-ITC"

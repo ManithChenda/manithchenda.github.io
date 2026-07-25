@@ -1,0 +1,25 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+{% include page-header.html intro=ui.shelfNote %}
+
+{%- for b in site.data.books -%}
+  {%- assign t = b[page.lang] -%}
+<div class="book">
+  {%- comment -%}
+    TODO(owner): placeholder CSS spine coloured by `hue` — swap for a real
+    cover image here if you add one.
+  {%- endcomment -%}
+  <div class="spine" style="background:{{ b.hue }}" aria-hidden="true">
+    <span class="spine-title mono">{{ t.title }}</span>
+  </div>
+  <div>
+    {%- if b.link and b.link != '#' and b.link != '' -%}
+    <div class="book-title"><a href="{{ b.link }}" target="_blank" rel="noopener">{{ t.title }}</a></div>
+    {%- else -%}
+    <div class="book-title">{{ t.title }}</div>
+    {%- endif -%}
+    <div class="book-author mono">{{ t.author }}</div>
+    <p class="book-note">{{ t.note }}</p>
+  </div>
+</div>
+{%- endfor -%}
+<div class="rule"></div>

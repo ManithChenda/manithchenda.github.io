@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz · harmonograph</title>
+<style>
+  :root{--bg:#16181a;--fg:#c3c9c1;--dim:#6b726a;--accent:#6fce9a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',ui-monospace,monospace;min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #2b2f31;font-size:13px}
+  header a{color:var(--accent);text-decoration:none}
+  h1{font-size:14px;font-weight:700;margin:0;color:#e8ece6}
+  main{flex:1;display:flex;flex-direction:column;gap:16px;padding:24px}
+  canvas{width:100%;flex:1;background:#111314;border:1px solid #2b2f31;border-radius:8px}
+  .ctl{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--dim)}
+  button{font-family:inherit;font-size:12px;background:#26302a;color:var(--accent);border:1px solid #2b2f31;padding:7px 14px;border-radius:6px;cursor:pointer}
+  .note{font-size:11.5px;color:var(--dim);max-width:70ch;line-height:1.7}
+</style>
+</head>
+<body>
+<header><h1>harmonograph.js</h1><a href="./">cd ../viz</a></header>
+<main>
+  <canvas id="c"></canvas>
+  <div class="ctl"><button id="r">re-seed [space]</button><span id="lbl"></span></div>
+  <p class="note">Two coupled pendulums drawing the interference of frequencies close to a 3:2 ratio — the same beating patterns that make consonance and dissonance audible.</p>
+</main>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d'),lbl=document.getElementById('lbl');
+function resize(){c.width=c.clientWidth*devicePixelRatio;c.height=c.clientHeight*devicePixelRatio;}
+addEventListener('resize',resize);resize();
+let p,t;
+function seed(){
+  const r=(a,b)=>a+Math.random()*(b-a);
+  p={f1:r(2,3),f2:r(2,3),f3:r(1.5,2.5),f4:r(1.5,2.5),p1:r(0,6),p2:r(0,6),d:r(0.002,0.006)};
+  t=0;x.clearRect(0,0,c.width,c.height);
+  lbl.textContent='f = '+p.f1.toFixed(2)+' : '+p.f2.toFixed(2);
+}
+document.getElementById('r').onclick=seed;
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();seed();}});
+seed();
+function frame(){
+  const w=c.width,h=c.height,cx=w/2,cy=h/2,R=Math.min(w,h)*0.32;
+  x.strokeStyle='rgba(111,206,154,0.55)';x.lineWidth=1.1*devicePixelRatio;x.beginPath();
+  let first=true;
+  for(let i=0;i<160;i++){
+    const tt=t+i*0.015;const e=Math.exp(-p.d*tt*60);
+    const X=cx+R*e*(Math.sin(tt*p.f1+p.p1)+Math.sin(tt*p.f3))/2;
+    const Y=cy+R*e*(Math.sin(tt*p.f2+p.p2)+Math.sin(tt*p.f4))/2;
+    first?(x.moveTo(X,Y),first=false):x.lineTo(X,Y);
+  }
+  x.stroke();t+=160*0.015;
+  if(t<70)requestAnimationFrame(frame);
+}
+seed();frame();
+document.getElementById('r').addEventListener('click',()=>{seed();frame();});
+addEventListener('keydown',e=>{if(e.code==='Space')frame();});
+</script>
+</body>
+</html>

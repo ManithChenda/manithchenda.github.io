@@ -1,0 +1,44 @@
+# Migrated verbatim from reference/strings.js (window.SITE.projects)
+#
+# TODO(owner): every `link` below is still the prototype placeholder "#".
+# Wire the real repo / project URLs before publishing.
+# A link of "#" renders the name as plain accent text instead of an anchor.
+- years: "2025"
+  stack: "PyTorch · ESP32"
+  link: "#"
+  en:
+    name: "roomprint"
+    blurb: "Few-shot acoustic room fingerprinting — identify a space from a few seconds of ambient sound."
+  km:
+    name: "roomprint"
+    blurb: "ការសម្គាល់បន្ទប់តាមសូរស័ព្ទ — កំណត់លំហពីសំឡេងបរិយាកាសពីរបីវិនាទី។"
+
+- years: "2023"
+  stack: "C · STM32"
+  link: "#"
+  en:
+    name: "smart-irrigation"
+    blurb: "IoT irrigation controller for FabLab-ITC — soil sensing, scheduling, and a rugged field enclosure."
+  km:
+    name: "smart-irrigation"
+    blurb: "ឧបករណ៍គ្រប់គ្រងស្រោចស្រព IoT សម្រាប់ FabLab-ITC — ចាប់សញ្ញាដី កាលវិភាគ និងស្រោមធន់នឹងស្ថានភាព។"
+
+- years: "2021"
+  stack: "Python · OpenCV"
+  link: "#"
+  en:
+    name: "signbot"
+    blurb: "Self-driving car robot that reads three traffic signs and maneuvers accordingly. My master's project."
+  km:
+    name: "signbot"
+    blurb: "មនុស្សយន្តរថយន្តបើកបរដោយខ្លួនឯង អានសញ្ញាចរាចរបី ហើយបើកតាមនោះ។ គម្រោងអនុបណ្ឌិតរបស់ខ្ញុំ។"
+
+- years: "2019"
+  stack: "Python · OpenCV"
+  link: "#"
+  en:
+    name: "facefollow"
+    blurb: "Line-following robot that stops when a human face appears ahead. Kitagawa Lab, Kochi."
+  km:
+    name: "facefollow"
+    blurb: "មនុស្សយន្តដើរតាមខ្សែ ឈប់នៅពេលមានមុខមនុស្សនៅខាងមុខ។ Kitagawa Lab កូជិ។"

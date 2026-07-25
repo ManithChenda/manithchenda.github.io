@@ -1,0 +1,30 @@
+# Migrated verbatim from reference/strings.js (window.SITE.publications)
+# `link: ""` renders without the [ view ↗ ] affordance.
+- year: "2021"
+  venue: "Journal of the College of Education, Yokohama National Univ., Educational Sciences, vol. 4, pp. 67–72"
+  authors: "M. Chenda, A. Kitagawa, T. Akamatsu"
+  link: "https://jglobal.jst.go.jp/en/detail?JGLOBAL_ID=202102255283353312"
+  en:
+    title: "Development of an Autonomous Driving Program for a Car Robot Using Machine Learning"
+  km:
+    title: "Development of an Autonomous Driving Program for a Car Robot Using Machine Learning"
+
+- year: "2019"
+  venue: "Bulletin of the Faculty of Education, Kochi University, vol. 79, pp. 119–126"
+  authors: "M. Chenda, A. Kitagawa"
+  link: "https://jglobal.jst.go.jp/en/detail?JGLOBAL_ID=202002280667673303"
+  en:
+    title: "Development of a Line Following Robot with Human Face Detection System"
+  km:
+    title: "Development of a Line Following Robot with Human Face Detection System"
+
+- year: "2016"
+  venue: "Undergraduate Thesis, Institute of Technology of Cambodia"
+  tag: "Thesis"
+  authors: "M. Chenda, T. Sovichea"
+  # TODO(owner): no public link for the thesis yet — add one here if it is deposited somewhere.
+  link: ""
+  en:
+    title: "Design of Attitude and Altitude Control Systems for a Drone"
+  km:
+    title: "Design of Attitude and Altitude Control Systems for a Drone"

@@ -1,0 +1,24 @@
+# Migrated verbatim from reference/strings.js (window.SITE.teaching)
+- years: "2025–now"
+  en:
+    module: "Internet of Things · Scientific Python"
+    org: "TUX Global Institute, Phnom Penh"
+  km:
+    module: "អ៊ិនធឺណិតនៃវត្ថុ · ភាសា Python សម្រាប់វិទ្យាសាស្ត្រ"
+    org: "វិទ្យាស្ថាន TUX Global ភ្នំពេញ"
+
+- years: "2022–2024"
+  en:
+    module: "Introduction to IT · Computer Application"
+    org: "Limkokwing University of Creative Technology, Phnom Penh"
+  km:
+    module: "ការណែនាំអំពី IT · កម្មវិធីកុំព្យូទ័រ"
+    org: "សាកលវិទ្យាល័យលីមកុកវីង ភ្នំពេញ"
+
+- years: "2021"
+  en:
+    module: "Python Programming"
+    org: "Beltei International University"
+  km:
+    module: "ការសរសេរកម្មវិធី Python"
+    org: "សាកលវិទ្យាល័យអន្តរជាតិប៊ែលធី"

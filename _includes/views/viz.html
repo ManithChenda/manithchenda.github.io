@@ -1,0 +1,24 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+{% include page-header.html intro=ui.vizNote %}
+
+<div class="viz-grid">
+  {%- for v in site.data.vizzes -%}
+    {%- assign t = v[page.lang] -%}
+  <a class="viz-card" href="{{ v.href | relative_url }}" target="_blank" rel="noopener">
+    <div class="viz-preview">
+      {%- case v.kind -%}
+      {%- when 'wave' -%}
+        <svg width="180" height="80" viewBox="0 0 180 80" fill="none" aria-hidden="true"><path d="M4 40 Q 26 4 48 40 T 92 40 T 136 40 T 176 40" stroke="var(--accent)" stroke-width="2"></path></svg>
+      {%- when 'spectro' -%}
+        <svg width="180" height="80" viewBox="0 0 180 80" aria-hidden="true"><g fill="var(--accent)"><rect x="10" y="46" width="10" height="24" opacity=".5"></rect><rect x="26" y="30" width="10" height="40" opacity=".8"></rect><rect x="42" y="14" width="10" height="56"></rect><rect x="58" y="34" width="10" height="36" opacity=".7"></rect><rect x="74" y="50" width="10" height="20" opacity=".4"></rect><rect x="90" y="24" width="10" height="46" opacity=".85"></rect><rect x="106" y="40" width="10" height="30" opacity=".6"></rect><rect x="122" y="18" width="10" height="52" opacity=".95"></rect><rect x="138" y="44" width="10" height="26" opacity=".5"></rect><rect x="154" y="32" width="10" height="38" opacity=".75"></rect></g></svg>
+      {%- when 'harmo' -%}
+        <svg width="120" height="80" viewBox="0 0 120 80" fill="none" aria-hidden="true"><path d="M60 8 C 96 20 96 60 60 72 C 24 60 24 20 60 8 Z M40 24 C 80 24 80 56 40 56 C 20 44 20 36 40 24 Z" stroke="var(--accent)" stroke-width="1.6"></path></svg>
+      {%- endcase -%}
+    </div>
+    <div class="viz-body">
+      <div class="viz-title mono">{{ t.title }} <span class="viz-open mono-prose">{{ ui.openViz }}</span></div>
+      <div class="viz-desc">{{ t.desc }}</div>
+    </div>
+  </a>
+  {%- endfor -%}
+</div>

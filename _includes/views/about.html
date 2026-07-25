@@ -1,0 +1,64 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+
+<div class="term-line mono about-prompt">{{ ui.handle }}:~$ <span class="cmd">whoami</span></div>
+
+<div class="intro">
+  <div class="intro-text">
+    <h1 class="intro-name">{{ ui.name }}</h1>
+    <div class="intro-role">{{ ui.role }}</div>
+    <div class="intro-affiliation">{{ ui.affiliation }}</div>
+    <p class="intro-bio">{{ ui.bio }}</p>
+  </div>
+  {%- comment -%}
+    Both portraits ship; the theme is a client-side attribute, so the swap is
+    done in CSS rather than at build time.
+  {%- endcomment -%}
+  <img class="portrait portrait-dark" src="{{ '/assets/portrait_green.png' | relative_url }}"
+       alt="portrait of CHENDA Manith">
+  <img class="portrait portrait-light" src="{{ '/assets/portrait_green_light.png' | relative_url }}"
+       alt="portrait of CHENDA Manith">
+</div>
+
+<div class="sec sec--first">
+  <span class="slashes mono">//</span><span class="sec-label">{{ ui.sec.education }}</span>
+</div>
+{%- for e in site.data.education -%}
+  {%- assign t = e[page.lang] -%}
+<div class="row-edu">
+  <span class="cv-years mono">{{ e.years }}</span>
+  <span><span class="cv-head">{{ t.degree }}</span><br><span class="cv-org">{{ t.org }}</span></span>
+  <span class="cv-place mono">{{ t.place }}</span>
+</div>
+{%- endfor -%}
+
+<div class="sec">
+  <span class="slashes mono">//</span><span class="sec-label">{{ ui.sec.experience }}</span>
+</div>
+{%- for x in site.data.experience -%}
+  {%- assign t = x[page.lang] -%}
+<div class="row-exp">
+  <span class="cv-years mono">{{ x.years }}</span>
+  <span><span class="cv-head">{{ t.role }}</span> · <span class="cv-org-inline">{{ t.org }}</span></span>
+</div>
+{%- endfor -%}
+
+<div class="sec">
+  <span class="slashes mono">//</span><span class="sec-label">{{ ui.sec.skills }}</span>
+</div>
+<div class="chips">
+  {%- for s in site.data.skills[page.lang] -%}
+  <span class="chip mono-prose">{{ s }}</span>
+  {%- endfor -%}
+</div>
+
+<div class="sec">
+  <span class="slashes mono">//</span><span class="sec-label">{{ ui.sec.publications }}</span>
+</div>
+{%- for p in site.data.publications -%}
+<div class="pub-mini">
+  <span class="pub-mini-title">{{ p[page.lang].title }}</span><br>
+  <span class="pub-mini-meta mono">{{ p.authors }} · {{ p.venue }}</span>
+</div>
+{%- endfor -%}
+
+<div class="term-line mono about-outro">{{ ui.handle }}:~$ <span class="cursor" aria-hidden="true"></span></div>

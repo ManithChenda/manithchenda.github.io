@@ -1,0 +1,26 @@
+# Header navigation order + the two URL trees.
+# Labels come from _data/ui.yml -> <lang>.nav.<key>
+- key: about
+  en: "/"
+  km: "/km/"
+- key: blog
+  en: "/blog/"
+  km: "/km/blog/"
+- key: projects
+  en: "/projects/"
+  km: "/km/projects/"
+- key: publications
+  en: "/publications/"
+  km: "/km/publications/"
+- key: teaching
+  en: "/teaching/"
+  km: "/km/teaching/"
+- key: talks
+  en: "/talks/"
+  km: "/km/talks/"
+- key: bookshelf
+  en: "/bookshelf/"
+  km: "/km/bookshelf/"
+- key: viz
+  en: "/viz/"
+  km: "/km/viz/"

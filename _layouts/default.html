@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="{{ page.lang }}"
+      data-lang="{{ page.lang }}"
+      data-theme="dark"
+      data-alt-url="{{ page.alt_url | relative_url }}"
+      {% if page.lang_entry %}data-lang-entry="true"{% endif %}>
+<head>
+{% include head.html %}
+</head>
+<body>
+  <a class="skip-link" href="#main">skip to content</a>
+  {% include header.html %}
+  {{ content }}
+  {% include footer.html %}
+</body>
+</html>

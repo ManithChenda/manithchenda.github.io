@@ -1,0 +1,13 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+{%- assign home = '/' -%}
+{%- if page.lang == 'km' -%}{%- assign home = '/km/' -%}{%- endif -%}
+
+<header class="site-header">
+  <div class="hdr-prompt mono">
+    <a class="hdr-handle" href="{{ home | relative_url }}">{{ ui.handle }}</a>
+    <span class="hdr-sigil">:~$</span>
+  </div>
+
+  {% include nav.html %}
+  {% include theme-lang-toggle.html %}
+</header>

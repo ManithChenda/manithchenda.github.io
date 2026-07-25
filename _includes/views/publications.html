@@ -1,0 +1,16 @@
+{% include page-header.html %}
+
+{%- for p in site.data.publications -%}
+<div class="pub">
+  <span class="pub-num mono">[{{ forloop.index }}]</span>
+  <div>
+    {%- if p.tag -%}<span class="pub-tag mono">{{ p.tag }}</span>{%- endif -%}
+    <span class="pub-title">{{ p[page.lang].title }}</span>
+    <div class="pub-meta mono">{{ p.authors }}<br>{{ p.venue }}</div>
+    {%- if p.link != '' -%}
+    <a class="pub-link mono" href="{{ p.link }}" target="_blank" rel="noopener">[ view ↗ ]</a>
+    {%- endif -%}
+  </div>
+</div>
+{%- endfor -%}
+<div class="rule"></div>

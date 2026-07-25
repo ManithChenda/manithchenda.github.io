@@ -1,0 +1,22 @@
+{% include page-header.html %}
+
+{%- for p in site.data.projects -%}
+  {%- assign t = p[page.lang] -%}
+<div class="proj">
+  <div class="proj-head">
+    {%- comment -%}
+      TODO(owner): projects still carry the placeholder link "#" — until a real
+      URL is set the name renders as plain text rather than a dead anchor.
+    {%- endcomment -%}
+    {%- if p.link and p.link != '#' and p.link != '' -%}
+    <a class="proj-name mono" href="{{ p.link }}">{{ t.name }}</a>
+    {%- else -%}
+    <span class="proj-name mono">{{ t.name }}</span>
+    {%- endif -%}
+    <span class="proj-years mono">{{ p.years }}</span>
+    <span class="proj-stack mono">{{ p.stack }}</span>
+  </div>
+  <p class="proj-blurb">{{ t.blurb }}</p>
+</div>
+{%- endfor -%}
+<div class="rule"></div>

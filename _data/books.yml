@@ -1,0 +1,71 @@
+# Migrated verbatim from reference/strings.js (window.SITE.books)
+#
+# `hue` colours the CSS book spine placeholder.
+# TODO(owner): spines are placeholders — swap in real cover images if desired,
+#   and wire the real `link` values. A link of "#" renders the title as plain
+#   text instead of an anchor.
+- hue: "#3f6b53"
+  link: "#"
+  en:
+    title: "The Book of Why"
+    author: "J. Pearl"
+    note: "Reframed how I ask whether a model has actually learned a cause or just a correlation in the room."
+  km:
+    title: "The Book of Why"
+    author: "J. Pearl"
+    note: "បានផ្លាស់ប្តូររបៀបដែលខ្ញុំសួរថាតើគំរូបានរៀនមូលហេតុពិត ឬគ្រាន់តែជាទំនាក់ទំនងក្នុងបន្ទប់។"
+
+- hue: "#4a5f7a"
+  link: "#"
+  en:
+    title: "An Introduction to the Analysis of Algorithms"
+    author: "Sedgewick & Flajolet"
+    note: "The book that made asymptotics feel like something you could hold."
+  km:
+    title: "An Introduction to the Analysis of Algorithms"
+    author: "Sedgewick & Flajolet"
+    note: "សៀវភៅដែលធ្វើឱ្យ asymptotics មានអារម្មណ៍ដូចជាអ្វីដែលអាចកាន់បាន។"
+
+- hue: "#6b5b7a"
+  link: "#"
+  en:
+    title: "On Sound"
+    author: "—"
+    note: "A quiet reminder that the ear evolved for survival, not fidelity. I return to it before every experiment."
+  km:
+    title: "On Sound"
+    author: "—"
+    note: "ការរំលឹកដ៏ស្ងប់ស្ងាត់ថាត្រចៀកវិវត្តន៍ដើម្បីរស់រាន មិនមែនដើម្បីភាពពិតប្រាកដ។ ខ្ញុំត្រឡប់ទៅវាមុនរាល់ការពិសោធន៍។"
+
+- hue: "#7a6b4a"
+  link: "#"
+  en:
+    title: "The Design of Everyday Things"
+    author: "D. Norman"
+    note: "Why my irrigation enclosure has exactly one button, and what it took to get there."
+  km:
+    title: "The Design of Everyday Things"
+    author: "D. Norman"
+    note: "ហេតុអ្វីស្រោមស្រោចស្រពរបស់ខ្ញុំមានប៊ូតុងតែមួយ និងអ្វីដែលត្រូវការដើម្បីទៅដល់ចំណុចនោះ។"
+
+- hue: "#5b7a6b"
+  link: "#"
+  en:
+    title: "Information Theory, Inference, and Learning Algorithms"
+    author: "D. MacKay"
+    note: "The single clearest bridge I know between entropy and everyday engineering."
+  km:
+    title: "Information Theory, Inference, and Learning Algorithms"
+    author: "D. MacKay"
+    note: "ស្ពានច្បាស់បំផុតដែលខ្ញុំស្គាល់ រវាង entropy និងវិស្វកម្មប្រចាំថ្ងៃ។"
+
+- hue: "#7a4a4a"
+  link: "#"
+  en:
+    title: "Zen and the Art of Motorcycle Maintenance"
+    author: "R. Pirsig"
+    note: "Read it in a dorm in Kochi. It is really a book about how to care about quality."
+  km:
+    title: "Zen and the Art of Motorcycle Maintenance"
+    author: "R. Pirsig"
+    note: "អានវានៅអន្តេវាសិកដ្ឋានក្នុងកូជិ។ តាមពិតវាជាសៀវភៅអំពីរបៀបយកចិត្តទុកដាក់លើគុណភាព។"

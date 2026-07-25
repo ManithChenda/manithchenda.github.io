@@ -1,0 +1,10 @@
+{% include page-header.html %}
+
+{%- for c in site.data.talks -%}
+  {%- assign t = c[page.lang] -%}
+<div class="row-talk">
+  <span class="cv-years mono">{{ c.date }}</span>
+  <span><span class="cv-head">{{ t.title }}</span><br><span class="cv-org">{{ t.event }}</span></span>
+</div>
+{%- endfor -%}
+<div class="rule"></div>

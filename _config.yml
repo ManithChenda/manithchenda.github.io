@@ -1,0 +1,40 @@
+# ============================================================
+#  Personal portfolio
+#  Jekyll config (GitHub Pages native build — no local build step)
+# ============================================================
+
+url: "https://manithchenda.github.io"
+baseurl: ""
+
+title: "CHENDA Manith"
+author: "CHENDA Manith"
+description: "PhD Candidate — AI-powered Machine Auditory Perception."
+
+# Default site language. Every page carries its own `lang` in front matter.
+lang: en
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# Posts get an explicit `permalink:` in their own front matter (one file per
+# language: /blog/<slug>/ for en, /km/blog/<slug>/ for km), so no global posts
+# permalink is set here. Layout + nav highlighting are defaulted instead.
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      view: "blog"
+
+exclude:
+  - README.md
+  - HANDOFF_README.md
+  - Gemfile
+  - Gemfile.lock
+  - reference/
+  - vendor/
+  - .jekyll-cache/

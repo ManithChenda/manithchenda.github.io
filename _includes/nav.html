@@ -1,0 +1,7 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+<nav class="site-nav">
+  {%- for item in site.data.nav -%}
+    {%- assign href = item[page.lang] -%}
+    <a href="{{ href | relative_url }}"{% if page.view == item.key %} aria-current="page"{% endif %}><span class="tilde mono">~/</span>{{ ui.nav[item.key] }}</a>
+  {%- endfor -%}
+</nav>

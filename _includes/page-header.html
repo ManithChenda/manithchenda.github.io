@@ -1,0 +1,13 @@
+{%- comment -%}
+  Shared `~/<page>` H1 + intro paragraph.
+  Caller may pass `intro` to override the default `ui.pageIntro[page.view]`.
+{%- endcomment -%}
+{%- assign ui = site.data.ui[page.lang] -%}
+{%- if include.intro -%}
+  {%- assign intro_text = include.intro -%}
+{%- else -%}
+  {%- assign intro_text = ui.pageIntro[page.view] -%}
+{%- endif -%}
+
+<h1 class="page-title"><span class="tilde mono">~/</span>{{ ui.nav[page.view] }}</h1>
+<p class="page-intro">{{ intro_text }}</p>

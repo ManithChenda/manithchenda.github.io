@@ -1,0 +1,25 @@
+---
+layout: default
+---
+{%- assign ui = site.data.ui[page.lang] -%}
+{%- assign blog_url = '/blog/' -%}
+{%- if page.lang == 'km' -%}{%- assign blog_url = '/km/blog/' -%}{%- endif -%}
+
+<main class="wrap" id="main">
+  <article class="post">
+    <a class="post-back mono" href="{{ blog_url | relative_url }}">← {{ ui.backToBlog }}</a>
+
+    <div class="post-meta mono-prose">{{ page.date | date: '%Y-%m-%d' }} · {{ page.read }} {{ ui.minRead }} · {{ page.tags | join: '  ·  ' }}</div>
+
+    <h1 class="post-title">{{ page.title }}</h1>
+
+    <div class="post-body">
+      {{ content }}
+      {%- if page.body_pending -%}
+      <!-- TODO(owner): the body of this post has not been written yet. Write it
+           below the front matter of the source file in _posts/ and delete
+           `body_pending: true`. -->
+      {%- endif -%}
+    </div>
+  </article>
+</main>

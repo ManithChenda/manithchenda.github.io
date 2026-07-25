@@ -1,0 +1,18 @@
+# Migrated verbatim from reference/strings.js (window.SITE.skills)
+en:
+  - "Embedded C"
+  - "Python"
+  - "PyTorch"
+  - "KiCad · Proteus"
+  - "FreeCAD · DFM · 3D printing"
+  - "Linux"
+  - "git / GitHub / GitLab"
+
+km:
+  - "ភាសា C"
+  - "ភាសា Python"
+  - "PyTorch"
+  - "KiCad · Proteus"
+  - "FreeCAD · DFM · បោះពុម្ព 3D"
+  - "Linux"
+  - "git / GitHub / GitLab"

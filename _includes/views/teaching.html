@@ -1,0 +1,10 @@
+{% include page-header.html %}
+
+{%- for c in site.data.teaching -%}
+  {%- assign t = c[page.lang] -%}
+<div class="row-teach">
+  <span class="cv-years mono">{{ c.years }}</span>
+  <span><span class="cv-head">{{ t.module }}</span><br><span class="cv-org">{{ t.org }}</span></span>
+</div>
+{%- endfor -%}
+<div class="rule"></div>

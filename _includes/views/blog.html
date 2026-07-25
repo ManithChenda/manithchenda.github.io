@@ -1,0 +1,20 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+{% include page-header.html %}
+
+{%- comment -%}
+  Posts render in the selected site language only — one Markdown file per
+  language, matched here on the `lang` front-matter field.
+{%- endcomment -%}
+{%- assign posts = site.posts | where: 'lang', page.lang -%}
+{%- for p in posts -%}
+<a class="post-item" href="{{ p.url | relative_url }}">
+  <div class="post-item-head">
+    <span class="post-item-date mono">{{ p.date | date: '%Y-%m-%d' }}</span>
+    <span class="post-item-title">{{ p.title }}</span>
+    <span class="post-item-read mono-prose">{{ p.read }} {{ ui.minRead }} →</span>
+  </div>
+  <div class="post-item-excerpt">{{ p.excerpt | strip_html | strip_newlines }}</div>
+  <div class="post-item-tags mono">{{ p.tags | join: '  ·  ' }}</div>
+</a>
+{%- endfor -%}
+<div class="rule"></div>

@@ -1,0 +1,21 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+{%- assign en_url = page.url -%}
+{%- assign km_url = page.alt_url -%}
+{%- if page.lang == 'km' -%}
+  {%- assign en_url = page.alt_url -%}
+  {%- assign km_url = page.url -%}
+{%- endif -%}
+
+<div class="hdr-controls">
+  <div class="lang-switch">
+    <a class="lang-en" href="{{ en_url | relative_url }}" data-lang-choice="en" lang="en"
+       {% if page.lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+    <span class="sep" aria-hidden="true">·</span>
+    <a class="lang-km" href="{{ km_url | relative_url }}" data-lang-choice="km" lang="km"
+       {% if page.lang == 'km' %}aria-current="true"{% endif %}>ខ្មែរ</a>
+  </div>
+
+  <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+    <span class="label-dark">◐ {{ ui.themeDark }}</span><span class="label-light">○ {{ ui.themeLight }}</span>
+  </button>
+</div>

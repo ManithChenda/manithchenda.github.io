@@ -1,0 +1,74 @@
+{%- assign ui = site.data.ui[page.lang] -%}
+
+{%- comment -%} ---- page title + description, derived from the content model ---- {%- endcomment -%}
+{%- if page.layout == 'post' -%}
+  {%- assign seo_name = page.title -%}
+  {%- assign seo_desc = page.excerpt -%}
+{%- elsif page.view == 'about' -%}
+  {%- assign seo_name = ui.name -%}
+  {%- assign seo_desc = ui.bio -%}
+{%- else -%}
+  {%- assign seo_name = ui.nav[page.view] -%}
+  {%- assign seo_desc = ui.pageIntro[page.view] -%}
+  {%- if page.view == 'bookshelf' -%}{%- assign seo_desc = ui.shelfNote -%}{%- endif -%}
+  {%- if page.view == 'viz' -%}{%- assign seo_desc = ui.vizNote -%}{%- endif -%}
+{%- endif -%}
+
+{%- if page.view == 'about' -%}
+  {%- capture seo_title -%}{{ ui.name }} — {{ ui.role }}{%- endcapture -%}
+{%- else -%}
+  {%- capture seo_title -%}{{ seo_name }} · {{ ui.name }}{%- endcapture -%}
+{%- endif -%}
+
+{%- if page.lang == 'km' -%}
+  {%- assign og_locale = 'km_KH' -%}{%- assign og_locale_alt = 'en_US' -%}
+{%- else -%}
+  {%- assign og_locale = 'en_US' -%}{%- assign og_locale_alt = 'km_KH' -%}
+{%- endif -%}
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>{{ seo_title | strip_html | normalize_whitespace }}</title>
+<meta name="description" content="{{ seo_desc | strip_html | normalize_whitespace | escape }}">
+<meta name="author" content="{{ site.author }}">
+
+{%- comment -%}
+  Canonical / Open Graph URLs need an absolute origin, so they are emitted only
+  when `url:` is set in _config.yml. A wrong absolute URL is worse than none.
+{%- endcomment -%}
+{%- if site.url != '' %}
+<link rel="canonical" href="{{ page.url | absolute_url }}">
+<link rel="alternate" hreflang="en" href="{% if page.lang == 'en' %}{{ page.url | absolute_url }}{% else %}{{ page.alt_url | absolute_url }}{% endif %}">
+<link rel="alternate" hreflang="km" href="{% if page.lang == 'km' %}{{ page.url | absolute_url }}{% else %}{{ page.alt_url | absolute_url }}{% endif %}">
+<link rel="alternate" hreflang="x-default" href="{% if page.lang == 'en' %}{{ page.url | absolute_url }}{% else %}{{ page.alt_url | absolute_url }}{% endif %}">
+<meta property="og:url" content="{{ page.url | absolute_url }}">
+<meta property="og:image" content="{{ '/assets/portrait_green.png' | absolute_url }}">
+<meta name="twitter:image" content="{{ '/assets/portrait_green.png' | absolute_url }}">
+{%- endif %}
+
+<meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}profile{% endif %}">
+<meta property="og:site_name" content="{{ ui.name | escape }}">
+<meta property="og:title" content="{{ seo_title | strip_html | normalize_whitespace | escape }}">
+<meta property="og:description" content="{{ seo_desc | strip_html | normalize_whitespace | escape }}">
+<meta property="og:locale" content="{{ og_locale }}">
+<meta property="og:locale:alternate" content="{{ og_locale_alt }}">
+{%- if page.layout == 'post' %}
+<meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}">
+<meta property="article:author" content="{{ site.author }}">
+{%- for tag in page.tags %}
+<meta property="article:tag" content="{{ tag }}">
+{%- endfor %}
+{%- endif %}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ seo_title | strip_html | normalize_whitespace | escape }}">
+<meta name="twitter:description" content="{{ seo_desc | strip_html | normalize_whitespace | escape }}">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Serif+Khmer:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+
+{%- comment -%} Blocking on purpose: sets data-theme before first paint. {%- endcomment -%}
+<script src="{{ '/assets/js/toggles.js' | relative_url }}"></script>

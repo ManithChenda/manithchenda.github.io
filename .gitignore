@@ -1,0 +1,13 @@
+# --- Jekyll build output / local tooling ---
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+vendor/
+Gemfile.lock
+.DS_Store
+
+# User specific
+HANDOFF_README.md
+.claude/
+reference/
