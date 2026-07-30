@@ -1,0 +1,549 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turning an echo into an LSTM sequence for classification</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#141a22; --panel2:#1b232e; --line:#243040;
+    --ink:#e6edf3; --muted:#8b97a7; --dim:#5c6675;
+    --trace:#57d0c6; --probe:#f0a848; --vec:#a78bfa; --grid:rgba(120,140,165,.10);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#05070a;color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:22px 16px 40px}
+  .shell{background:var(--bg);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  header{padding:20px 22px 16px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+  .sub{margin:6px 0 0;color:var(--muted);font-size:13.5px;max-width:64ch}
+  .eq{font-family:var(--mono);color:var(--trace)}
+  .tabs{display:flex;gap:2px;padding:12px 14px 0;background:var(--bg)}
+  .tab{flex:1;appearance:none;border:1px solid var(--line);border-bottom:none;background:var(--panel);
+    color:var(--muted);font-family:var(--sans);font-size:12.5px;font-weight:500;padding:10px 8px;
+    border-radius:10px 10px 0 0;cursor:pointer;transition:.15s;line-height:1.25}
+  .tab .k{font-family:var(--mono);font-size:11px;color:var(--dim);display:block}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--panel2);color:var(--ink);border-color:var(--probe);box-shadow:inset 0 2px 0 var(--probe)}
+  .tab[aria-selected="true"] .k{color:var(--probe)}
+  .stage{background:var(--panel2);border:1px solid var(--line);padding:16px 16px 18px}
+  .scope{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 8px 4px}
+  .scope canvas{display:block;width:100%}
+  .axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:2px 4px 4px}
+  .flabel{position:absolute;left:8px;top:50%;transform:rotate(-90deg) translateX(50%);transform-origin:left center;
+    font-family:var(--mono);font-size:10px;color:var(--dim);pointer-events:none}
+  .flow{display:grid;grid-template-columns:1.3fr auto 1fr auto 1fr;gap:10px;align-items:center;margin-top:12px}
+  @media(max-width:560px){.flow{grid-template-columns:1fr;text-align:center}.arrowcol{transform:rotate(90deg)}}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .cell .cap{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+  .cell canvas{display:block;width:100%}
+  .arrowcol{color:var(--probe);font-size:22px;text-align:center;font-weight:300}
+  .lstm{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:14px 12px;min-height:96px;cursor:pointer;
+    transition:border-color .15s,box-shadow .15s;position:relative}
+  .lstm:hover{border-color:var(--probe);box-shadow:0 0 0 1px rgba(240,168,72,.25)}
+  .lstm[aria-expanded="true"]{border-color:var(--probe)}
+  .lstm .box{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--trace);border:1.5px solid var(--trace);
+    border-radius:8px;padding:8px 16px;background:rgba(87,208,198,.06)}
+  .lstm .h{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px}
+  .lstm .hint{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px;letter-spacing:.02em}
+  .lstm:hover .hint{color:var(--probe)}
+  #cellPanel{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;display:none}
+  #cellPanel.open{display:block;animation:drop .22s ease}
+  @keyframes drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .cellhead{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-bottom:1px solid var(--line)}
+  .cellhead .t{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .cellhead button{appearance:none;background:none;border:none;color:var(--dim);cursor:pointer;font-size:15px;line-height:1;font-family:var(--mono);padding:2px 4px}
+  .cellhead button:hover{color:var(--probe)}
+  #cellPanel .cbody{padding:10px 12px 6px}
+  #cellPanel svg{display:block;width:100%;height:auto}
+  #cellPanel .legend{display:flex;gap:16px;flex-wrap:wrap;padding:2px 14px 12px;font-family:var(--mono);font-size:10px;color:var(--dim)}
+  #cellPanel .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .lstm.headbtn .box{color:var(--probe);border-color:var(--probe);background:rgba(240,168,72,.06)}
+  #headPanel{margin-top:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;display:none}
+  #headPanel.open{display:block;animation:drop .22s ease}
+  #headPanel .cbody{padding:10px 12px 4px}
+  #headPanel svg{display:block;width:100%;height:auto}
+  .aggdesc{padding:6px 14px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+  .aggdesc div{font-size:12px;color:var(--muted);line-height:1.55}
+  .aggdesc b{color:var(--ink);font-weight:600}
+  .aggdesc .m{font-family:var(--mono);color:var(--trace)}
+  .aggdesc .katex{color:var(--trace)}
+  #headPanel .katex,#cellPanel .katex{line-height:1.1}
+  @media(max-width:560px){.aggdesc{grid-template-columns:1fr}}
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-family:var(--sans);
+    font-size:13px;font-weight:500;padding:8px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:7px}
+  .btn:hover{border-color:var(--probe);color:var(--probe)}
+  .btn.primary{background:var(--probe);color:#1a1206;border-color:var(--probe)}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .sld{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  input[type=range]{accent-color:var(--probe);cursor:pointer}
+  .scrub{flex:1;min-width:140px}
+  input[type=range].scrub{width:100%}
+  .caption{margin:14px 0 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--probe);
+    border-radius:0 8px 8px 0;font-size:13px;color:var(--muted)}
+  .caption b{color:var(--ink);font-weight:600}
+  .caption .val{font-family:var(--mono);color:var(--trace)}
+  footer{padding:12px 22px;color:var(--dim);font-size:11.5px;font-family:var(--mono);border-top:1px solid var(--line);background:var(--bg)}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap"><div class="shell">
+  <header>
+    <h1>Turning an echo into an LSTM sequence for classification</h1>
+    <p class="sub">The recurrent core reads a sequence of vectors $x_1, x_2, \dots, x_T$, one per timestep.
+      What one $x_t$ contains — and how many steps $T$ there are — is a windowing
+      choice made <em>before</em> the LSTM. Three definitions, same ultrasonic echo return:</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Input framing methods">
+    <button class="tab" role="tab" aria-selected="true"  data-m="0"><span class="k">d = 1</span>Raw sample</button>
+    <button class="tab" role="tab" aria-selected="false" data-m="1"><span class="k">Conv1d</span>Raw frame</button>
+    <button class="tab" role="tab" aria-selected="false" data-m="2"><span class="k">STFT</span>Spectral frame</button>
+  </div>
+
+  <div class="stage">
+    <div class="scope">
+      <span class="flabel" id="flabel" style="display:none">freq → 125 kHz</span>
+      <canvas id="sig" height="200" aria-label="Signal display"></canvas>
+      <div class="axis"><span id="axL">t = 0 s</span><span id="axR">t = 4 ms</span></div>
+    </div>
+
+    <div class="flow">
+      <div class="cell">
+        <div class="cap" id="vecCap">xₜ = one sample (ℝ¹)</div>
+        <canvas id="vec" height="96" aria-label="Current input vector"></canvas>
+      </div>
+      <div class="arrowcol">→</div>
+      <div class="lstm" id="lstmBox" role="button" tabindex="0" aria-expanded="false" aria-controls="cellPanel">
+        <div class="box">LSTM</div>
+        <div class="h">→ hₜ</div>
+        <div class="hint" id="lstmHint">▸ click to open the cell</div>
+      </div>
+      <div class="arrowcol">→</div>
+      <div class="lstm headbtn" id="headBox" role="button" tabindex="0" aria-expanded="false" aria-controls="headPanel">
+        <div class="box">head</div>
+        <div class="h">→ ŷ</div>
+        <div class="hint" id="headHint">▸ click to open the head</div>
+      </div>
+    </div>
+
+    <div id="cellPanel" aria-hidden="true">
+      <div class="cellhead">
+        <span class="t">inside the cell · gates as memory valves (live for the current step)</span>
+        <button id="cellClose" aria-label="Collapse">✕</button>
+      </div>
+      <div class="cbody"><div id="cellSvgHost"></div></div>
+      <div class="legend">
+        <span><i style="background:#5fd27a"></i>long-term memory (cell cₜ)</span>
+        <span><i style="background:#e0559b"></i>short-term memory (hidden hₜ)</span>
+        <span><i style="background:#58a6ff"></i>input xₜ</span>
+        <span>σ → % to keep · tanh → candidate</span>
+      </div>
+    </div>
+
+    <div id="headPanel" aria-hidden="true">
+      <div class="cellhead">
+        <span class="t">the head · sequence of hidden states → one class</span>
+        <button id="headClose" aria-label="Collapse">✕</button>
+      </div>
+      <div class="cbody"><div id="headSvgHost"></div></div>
+      <div class="aggdesc">
+        <div><b>Last state</b> — $z = h_T$. Simplest; trusts the final state to hold the whole-sequence summary.</div>
+        <div><b>Mean / max pool</b> — $z = \operatorname{pool}_t\, h_t$. Robust when the cue is spread across time, not just at the end.</div>
+        <div><b>Attention pool</b> — $z = \sum_t \alpha_t\, h_t$, learned weights $\alpha_t$. Concentrates on the most informative timesteps.</div>
+        <div><b>BiLSTM</b> — $z = [\,h_T^{\rightarrow};\, h_0^{\leftarrow}\,] \in \mathbb{R}^{128}$. Concatenates a forward and backward pass, so $z$ sees past and future.</div>
+      </div>
+    </div>
+
+    <div class="tape">
+      <div class="row" style="display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:11px;color:var(--muted);margin:14px 0 5px">
+        <span>sequence tape</span><span>step <b id="tCur" style="color:var(--ink)">1</b> / <b id="tTot" style="color:var(--ink)">1000</b></span>
+      </div>
+      <canvas id="tape" height="46" aria-label="Sequence progress"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="play"><span id="playIco">❚❚</span> <span id="playTxt">Pause</span></button>
+      <button class="btn" id="reset">↻ Reset</button>
+      <div class="sld"><span>speed</span><input type="range" id="speed" min="0.25" max="3" step="0.25" value="1"><span id="spVal">1.0×</span></div>
+      <input type="range" class="scrub" id="scrub" min="0" max="999" step="1" value="0" aria-label="Scrub timestep">
+    </div>
+
+    <p class="caption" id="cap"></p>
+  </div>
+  <footer id="foot">ultrasonic echo · N = 1000 · fs = 250 kHz</footer>
+</div></div>
+
+<script>
+// ===================== signal: synthetic ultrasonic echo =====================
+const N=1000, FS=250000, DT=1/FS;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+const sig=new Float32Array(N);
+(function(){
+  const noise=mulberry32(20260728); let p1=0,p2=0,p3=0;
+  for(let n=0;n<N;n++){
+    const u=n/N;
+    const e=Math.exp(-Math.pow((u-0.47)/0.15,2)) + 0.55*Math.exp(-Math.pow((u-0.63)/0.09,2));
+    const f1=90000+(42000-90000)*Math.pow(u,1.7);   // curved descending sweep
+    const f2=58000+(28000-58000)*Math.pow(u,2.3);
+    const f3=70000+(110000-70000)*Math.pow(u,0.6);   // faint rising streak
+    p1+=2*Math.PI*f1*DT; p2+=2*Math.PI*f2*DT; p3+=2*Math.PI*f3*DT;
+    let s=e*(Math.sin(p1)+0.75*Math.sin(p2)+0.40*Math.sin(p3));
+    s+=(noise()*2-1)*(0.25+0.5*e);                   // envelope-weighted noise
+    sig[n]=s;
+  }
+  let mx=1e-9; for(let n=0;n<N;n++) mx=Math.max(mx,Math.abs(sig[n]));
+  for(let n=0;n<N;n++) sig[n]/=mx;
+})();
+
+// ---- spectrogram: 64 time bins x 32 freq bins ----
+const F3=64, BINS=32, FRAMES3=64;
+const frameStart=i=>Math.round(i*(N-F3)/(FRAMES3-1));
+function magSpectrum(start){
+  const mag=new Float32Array(BINS);
+  for(let k=0;k<BINS;k++){let re=0,im=0;
+    for(let n=0;n<F3;n++){const w=0.5-0.5*Math.cos(2*Math.PI*n/(F3-1));
+      const v=sig[start+n]*w, a=-2*Math.PI*k*n/F3; re+=v*Math.cos(a); im+=v*Math.sin(a);}
+    mag[k]=Math.sqrt(re*re+im*im);}
+  return mag;
+}
+const spec=[]; let specMax=1e-9;
+for(let f=0;f<FRAMES3;f++){const m=magSpectrum(frameStart(f));
+  for(let k=0;k<BINS;k++) if(m[k]>specMax) specMax=m[k]; spec.push(m);}
+
+// ---- method 2: framed features ----
+const F2=160, H2=80, DFEAT=16;
+const FRAMES2=Math.floor((N-F2)/H2)+1;   // 11
+let featMax=1e-9;
+function featVec(fi){const s=fi*H2,g=F2/DFEAT,out=new Float32Array(DFEAT);
+  for(let i=0;i<DFEAT;i++){let acc=0,c=0;for(let j=0;j<g;j++){const idx=s+i*g+j;if(idx<N){acc+=sig[idx]*sig[idx];c++;}}out[i]=Math.sqrt(acc/Math.max(c,1));}
+  return out;}
+for(let f=0;f<FRAMES2;f++){const v=featVec(f);for(const x of v)if(x>featMax)featMax=x;}
+
+// ---- per-method config ----
+const CFG=[
+  {T:N,       inc:14, interval:30 , dim:'ℝ¹'},
+  {T:FRAMES2, inc:1 , interval:400, dim:'ℝ¹⁶'},
+  {T:FRAMES3, inc:1 , interval:110, dim:'ℝ³²'},
+];
+const CAP=[
+  `<b>Raw sample.</b> Each $x_t$ is a single ADC sample, so the sequence length equals the sample count — $T = 1000$ for this 4 ms echo at 250 kHz. BPTT over that many steps is slow and the state struggles to bridge them; almost never used with RNNs.`,
+  `<b>Raw frame → Conv1d.</b> Slice into 160-sample windows, hop 80 (50% overlap). A Conv1d over each window emits a learned feature vector — that vector <em>is</em> $x_t \\in \\mathbb{R}^{16}$. Sequence collapses to $T = 11$. Bars show illustrative per-window energy features.`,
+  `<b>Spectral frame → STFT.</b> Each $x_t$ is one spectrogram column: energy across $32$ frequency bins at that time slice. Reading the $64$ columns left-to-right hands the LSTM the curved sweep directly — natural for echo classification.`,
+];
+
+// ---- spectrogram colour ramp (theme) ----
+const STOPS=[[14,17,23],[26,58,86],[30,150,146],[240,168,72],[250,242,214]], POS=[0,.28,.55,.82,1];
+function ramp(t){t=Math.max(0,Math.min(1,t));
+  for(let i=1;i<POS.length;i++){if(t<=POS[i]){const a=POS[i-1],b=POS[i],u=(t-a)/(b-a),A=STOPS[i-1],B=STOPS[i];
+    return `rgb(${A[0]+(B[0]-A[0])*u|0},${A[1]+(B[1]-A[1])*u|0},${A[2]+(B[2]-A[2])*u|0})`;}}
+  return 'rgb(250,242,214)';}
+
+// ===================== canvas plumbing =====================
+function fit(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.getAttribute('height')|0;
+  cv.width=w*dpr;cv.height=h*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);cv._W=w;cv._H=h;return ctx;}
+const sigCv=document.getElementById('sig'), vecCv=document.getElementById('vec'), tapeCv=document.getElementById('tape');
+let sctx,vctx,tctx;
+let method=0; const cur=[0,0,0]; let playing=true, speed=1, last=0, acc=0, cellOpen=false, headOpen=false;
+function fitAll(){sctx=fit(sigCv);vctx=fit(vecCv);tctx=fit(tapeCv);drawAll();}
+
+function grid(ctx,W,H){ctx.strokeStyle='rgba(120,140,165,.10)';ctx.lineWidth=1;
+  for(let i=1;i<8;i++){const x=W*i/8;ctx.beginPath();ctx.moveTo(x,4);ctx.lineTo(x,H-4);ctx.stroke();}
+  for(let i=1;i<4;i++){const y=H*i/4;ctx.beginPath();ctx.moveTo(4,y);ctx.lineTo(W-4,y);ctx.stroke();}}
+function drawSignal(){
+  const W=sigCv._W,H=sigCv._H,pad=6,plotW=W-2*pad,mid=H/2;
+  sctx.clearRect(0,0,W,H);grid(sctx,W,H);
+  if(method===2){drawSpectro(W,H,pad);return;}
+  sctx.strokeStyle='#57d0c6';sctx.lineWidth=1.1;sctx.beginPath();
+  for(let n=0;n<N;n++){const x=pad+plotW*n/(N-1),y=mid-sig[n]*(H*0.40);n?sctx.lineTo(x,y):sctx.moveTo(x,y);}
+  sctx.stroke();
+  if(method===0){const c=cur[0],x=pad+plotW*c/(N-1);
+    sctx.strokeStyle='rgba(240,168,72,.55)';sctx.lineWidth=1;sctx.beginPath();sctx.moveTo(x,4);sctx.lineTo(x,H-4);sctx.stroke();
+    const y=mid-sig[c]*(H*0.40);sctx.fillStyle='#f0a848';sctx.beginPath();sctx.arc(x,y,3.5,0,7);sctx.fill();
+    sctx.strokeStyle='rgba(240,168,72,.9)';sctx.lineWidth=1.5;sctx.beginPath();sctx.arc(x,y,6.5,0,7);sctx.stroke();
+  }else{const s=cur[1]*H2,e=Math.min(s+F2,N),x0=pad+plotW*s/(N-1),x1=pad+plotW*e/(N-1);
+    sctx.fillStyle='rgba(240,168,72,.16)';sctx.fillRect(x0,4,x1-x0,H-8);
+    sctx.strokeStyle='rgba(240,168,72,.75)';sctx.lineWidth=1.2;sctx.strokeRect(x0,4,x1-x0,H-8);}
+}
+function drawSpectro(W,H,pad){
+  const plotW=W-2*pad,plotH=H-8,cw=plotW/FRAMES3,ch=plotH/BINS;
+  for(let i=0;i<FRAMES3;i++)for(let k=0;k<BINS;k++){
+    const v=Math.pow(spec[i][k]/specMax,0.55);sctx.fillStyle=ramp(v);
+    sctx.fillRect(pad+i*cw,4+(BINS-1-k)*ch,cw+0.6,ch+0.6);}
+  const c=cur[2],x=pad+c*cw;sctx.strokeStyle='rgba(240,168,72,.95)';sctx.lineWidth=1.6;sctx.strokeRect(x,4,cw,plotH);
+}
+function drawVector(){
+  const W=vecCv._W,H=vecCv._H,pad=6;vctx.clearRect(0,0,W,H);
+  if(method===0){const v=sig[cur[0]],mid=H/2,bw=46,x=W/2-bw/2;
+    vctx.strokeStyle='rgba(120,140,165,.25)';vctx.beginPath();vctx.moveTo(pad,mid);vctx.lineTo(W-pad,mid);vctx.stroke();
+    const bh=v*(H*0.42);vctx.fillStyle='#a78bfa';vctx.fillRect(x,bh>=0?mid-bh:mid,bw,Math.abs(bh));
+    vctx.fillStyle='#8b97a7';vctx.font='11px ui-monospace';vctx.textAlign='center';vctx.fillText(v.toFixed(3),W/2,H-4);
+  }else{const arr=method===1?featVec(cur[1]):spec[cur[2]],mx=method===1?featMax:specMax,d=arr.length,
+    gap=d>24?0.5:2,bw=(W-2*pad-(d-1)*gap)/d,base=H-6;
+    for(let i=0;i<d;i++){const t=Math.pow(arr[i]/mx,method===2?0.6:1),bh=t*(H-14),x=pad+i*(bw+gap);
+      vctx.fillStyle=method===2?ramp(t):'#a78bfa';vctx.fillRect(x,base-bh,bw,bh);}}
+}
+function roundRect(ctx,x,y,w,h,r){r=Math.min(r,h/2,w/2);ctx.beginPath();ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawTape(){
+  const W=tapeCv._W,H=tapeCv._H,pad=6,y=H/2,trkH=14,T=CFG[method].T,c=cur[method];
+  tctx.clearRect(0,0,W,H);tctx.fillStyle='#1b232e';roundRect(tctx,pad,y-trkH/2,W-2*pad,trkH,7);tctx.fill();
+  if(T<=80){tctx.strokeStyle='rgba(120,140,165,.22)';tctx.lineWidth=1;
+    for(let i=0;i<T;i++){const x=pad+(W-2*pad)*(i/(T-1||1));tctx.beginPath();tctx.moveTo(x,y-trkH/2);tctx.lineTo(x,y+trkH/2);tctx.stroke();}}
+  const fw=(W-2*pad)*(c/(T-1||1));tctx.fillStyle='#f0a848';roundRect(tctx,pad,y-trkH/2,Math.max(fw,4),trkH,7);tctx.fill();
+  const hx=pad+fw;tctx.fillStyle='#fff';tctx.beginPath();tctx.arc(hx,y,4.5,0,7);tctx.fill();
+  tctx.strokeStyle='#f0a848';tctx.lineWidth=2;tctx.beginPath();tctx.arc(hx,y,4.5,0,7);tctx.stroke();
+}
+function drawAll(){drawSignal();drawVector();drawTape();syncFrame();if(cellOpen)updateCell();if(headOpen)updateHead();}
+
+function syncFrame(){
+  document.getElementById('tCur').textContent=cur[method]+1;
+  document.getElementById('scrub').value=cur[method];
+}
+function syncMethod(){
+  const T=CFG[method].T;
+  document.getElementById('tTot').textContent=T;
+  document.getElementById('flabel').style.display=method===2?'block':'none';
+  document.getElementById('axL').textContent=method===2?'0 ms':'t = 0 ms';
+  document.getElementById('axR').textContent=method===2?'4 ms · 64×32':'t = 4 ms · 1000 pts';
+  document.getElementById('scrub').max=T-1;
+  const foot=['raw waveform · one scalar per step',
+              'Conv1d front-end · 160-sample windows, hop 80',
+              'STFT · 64-pt frames · 64 time × 32 freq bins'][method];
+  document.getElementById('foot').textContent='ultrasonic echo · N = 1000 · fs = 250 kHz · '+foot;
+  const vc=document.getElementById('vecCap');
+  vc.innerHTML=(method===0?'$x_t$ = one sample ':method===1?'$x_t$ = Conv1d features ':'$x_t$ = spectral column ')+'$(\\mathbb{R}^{'+dM[method]+'})$';
+  const cap=document.getElementById('cap'); cap.innerHTML=CAP[method];
+  typeset(vc); typeset(cap);
+}
+function loop(ts){if(!last)last=ts;const dt=ts-last;last=ts;
+  if(playing){acc+=dt*speed;const iv=CFG[method].interval;
+    while(acc>=iv){acc-=iv;cur[method]+=CFG[method].inc;if(cur[method]>=CFG[method].T)cur[method]=0;}
+    drawAll();}
+  requestAnimationFrame(loop);}
+
+// ===================== detailed LSTM cell (StatQuest style) =====================
+const sigmoid=x=>1/(1+Math.exp(-x));
+// single-unit weights [w_h, w_x, b] — shown on the diagram and used live
+const SW={f:[1.20,1.50,1.30], i:[1.00,1.80,0.20], g:[1.10,2.00,-0.10], o:[1.50,1.40,0.50]};
+function stepIndices(){const inc=CFG[method].inc,out=[];for(let t=0;t<=cur[method];t+=inc)out.push(t);
+  if(out[out.length-1]!==cur[method])out.push(cur[method]);return out;}
+function centerSample(t){if(method===0)return t;if(method===1)return Math.min(N-1,t*H2+(F2>>1));return Math.min(N-1,frameStart(t)+(F3>>1));}
+function computeState1(){
+  const idx=stepIndices();let h=0,c=0,F=0,I=0,G=0,O=0,x=0;
+  for(const t of idx){x=sig[centerSample(t)];
+    F=sigmoid(SW.f[0]*h+SW.f[1]*x+SW.f[2]);
+    I=sigmoid(SW.i[0]*h+SW.i[1]*x+SW.i[2]);
+    G=Math.tanh(SW.g[0]*h+SW.g[1]*x+SW.g[2]);
+    O=sigmoid(SW.o[0]*h+SW.o[1]*x+SW.o[2]);
+    c=F*c+I*G;h=O*Math.tanh(c);}
+  return {F,I,G,O,c,h,x,pot:Math.tanh(c)};
+}
+
+const C={green:'#5fd27a',mag:'#e0559b',blue:'#58a6ff',teal:'#57d0c6',amber:'#f0a848',purple:'#a78bfa',pink:'#ec6f9b',grey:'#8b97a7',ink:'#e6edf3',dim:'#5c6675'};
+const dM=[1,16,32];        // input dimension per method (raw sample / raw frame / spectral)
+const RED='#ff6b6b';       // tensor-size annotations
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function kx(latex){try{return window.katex?katex.renderToString(latex,{throwOnError:false,output:'html'}):esc(latex);}catch(e){return esc(latex);}}
+function typeset(el){try{if(window.renderMathInElement&&el)renderMathInElement(el,{delimiters:[{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}}
+// rich-math label inside an SVG (foreignObject + KaTeX); cy is the vertical centre
+function M(x,cy,latex,anchor,color,px,w,id){
+  anchor=anchor||'middle';color=color||'#e6edf3';px=px||13;w=w||160;
+  const fx=anchor==='start'?x:anchor==='end'?x-w:x-w/2, h=Math.round(px*2.2);
+  const just=anchor==='start'?'flex-start':anchor==='end'?'flex-end':'center';
+  return `<foreignObject x="${fx}" y="${Math.round(cy-h/2)}" width="${w}" height="${h}" style="overflow:visible">`
+    +`<div xmlns="http://www.w3.org/1999/xhtml" style="height:${h}px;display:flex;align-items:center;justify-content:${just};color:${color};font-size:${px}px;white-space:nowrap">`
+    +`<span${id?` id="${id}"`:''}>${kx(latex)}</span></div></foreignObject>`;
+}
+function buildCellSVG(){
+  const scurve=(cx,cy,col)=>
+    `<rect id="box_${col}" x="${cx-30}" y="${cy-30}" width="60" height="60" rx="10" fill="${col}" fill-opacity="0.10" stroke="${col}" stroke-width="1.6"/>`+
+    `<line x1="${cx-30}" y1="${cy}" x2="${cx+30}" y2="${cy}" stroke="${col}" stroke-opacity=".25" stroke-width="1"/>`+
+    `<line x1="${cx}" y1="${cy-30}" x2="${cx}" y2="${cy+30}" stroke="${col}" stroke-opacity=".25" stroke-width="1"/>`+
+    `<path d="M ${cx-21} ${cy+15} C ${cx-6} ${cy+15} ${cx+6} ${cy-15} ${cx+21} ${cy-15}" fill="none" stroke="${C.ink}" stroke-width="2.4" stroke-linecap="round"/>`;
+  const vpill=(x,y,id,col)=>`<rect x="${x-24}" y="${y-11}" width="48" height="22" rx="11" fill="#0e1117" stroke="${col}" stroke-width="1.2"/><text id="${id}" x="${x}" y="${y+4}" text-anchor="middle" font-family="ui-monospace" font-size="12" fill="${C.ink}">0.00</text>`;
+  const tag=(x,y,txt,col)=>`<rect x="${x-27}" y="${y-11}" width="54" height="22" rx="5" fill="#0e1117" stroke="${col}" stroke-width="1"/><text x="${x}" y="${y+4}" text-anchor="middle" font-family="ui-monospace" font-size="11" fill="${col}">${txt}</text>`;
+  const sumn=(x,y)=>`<circle cx="${x}" cy="${y}" r="14" fill="#0e1117" stroke="${C.grey}" stroke-width="1.2"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-family="ui-monospace" font-size="9.5" fill="#c9d3df">sum</text>`;
+  const opx=(x,y)=>`<circle cx="${x}" cy="${y}" r="13" fill="#0e1117" stroke="${C.grey}" stroke-width="1.2"/><text x="${x}" y="${y+6}" text-anchor="middle" font-family="ui-monospace" font-size="18" fill="${C.ink}">×</text>`;
+  const L=(x1,y1,x2,y2,col,w)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w||1.4}"/>`;
+  const sz=(x,y,txt,anchor,id)=>`<text ${id?`id="${id}" `:''}x="${x}" y="${y}" text-anchor="${anchor}" font-family="ui-monospace" font-weight="700" font-size="11" fill="${RED}">${txt}</text>`;
+
+  const ST=[
+    {X:250,col:C.blue ,l1:'% Long-Term',   l2:'to Remember',wh:'×1.20',wx:'×1.50',b:'+1.30',vid:'vF',pill:'R',ldx:-52},
+    {X:440,col:C.teal ,l1:'% Potential Mem',l2:'to Remember',wh:'×1.00',wx:'×1.80',b:'+0.20',vid:'vI',pill:'L',ldx:0},
+    {X:610,col:C.amber,l1:'Potential Long-',l2:'Term Memory', wh:'×1.10',wx:'×2.00',b:'−0.10',vid:'vG',pill:'R',ldx:0},
+    {X:790,col:C.purple,l1:'% Potential Mem',l2:'to Remember',wh:'×1.50',wx:'×1.40',b:'+0.50',vid:'vO',pill:'L',ldx:0},
+  ];
+  const magY=470, greyY=500, sumY=300, boxCy=181;
+  let s='';
+  // stage bodies
+  for(const g of ST){const X=g.X, lx=X+(g.ldx||0);
+    s+=`<text x="${lx}" y="${106}" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="12" fill="${g.col}">${g.l1}</text>`;
+    s+=`<text x="${lx}" y="${120}" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="12" fill="${g.col}">${g.l2}</text>`;
+    s+=scurve(X,boxCy,g.col);
+    s+=vpill(g.pill==='L'?X-56:X+52,boxCy,g.vid,g.col);
+    // branches
+    s+=L(X-38,magY,X-38,sumY+8,C.mag,1.4);
+    s+=L(X+30,greyY,X+30,sumY+8,C.grey,1.4);
+    s+=L(X-38,sumY+8,X+30,sumY+8,C.grey,1.2);
+    s+=sumn(X,sumY);
+    s+=L(X,sumY-14,X,boxCy+30,C.grey,1.4);
+    s+=tag(X-38,392,g.wh,C.mag);
+    s+=tag(X+30,420,g.wx,C.grey);
+    s+=tag(X+34,256,g.b,C.green);
+  }
+  // memory highways + squares
+  s+=L(32,60,968,60,C.green,3);
+  s+=L(32,magY,968,magY,C.mag,3);
+  s+=L(120,greyY,830,greyY,C.grey,2);
+  s+=`<rect x="34" y="46" width="28" height="28" rx="4" fill="none" stroke="${C.green}" stroke-width="2"/>`;
+  s+=`<rect x="34" y="456" width="28" height="28" rx="4" fill="none" stroke="${C.mag}" stroke-width="2"/>`;
+  s+=`<rect x="250" y="518" width="46" height="34" rx="4" fill="none" stroke="${C.blue}" stroke-width="2"/>`;
+  s+=L(273,518,273,greyY,C.grey,2);
+  // labels for memories / input
+  s+=`<text x="34" y="34" font-family="Inter,sans-serif" font-weight="700" font-size="13" fill="${C.green}">Long-Term Memory</text>`;
+  s+=`<text x="640" y="34" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" fill="${C.green}">New Long-Term Memory</text>`;
+  s+=`<text x="18" y="452" font-family="Inter,sans-serif" font-weight="700" font-size="13" fill="${C.mag}">Short-Term Memory</text>`;
+  s+=`<text x="905" y="500" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="12" fill="${C.mag}">New Short-</text>`;
+  s+=`<text x="905" y="514" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="12" fill="${C.mag}">Term Memory</text>`;
+  s+=`<text x="273" y="568" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="12" fill="${C.blue}">Input</text>`;
+  s+=vpill(273,535,'vIn',C.blue);
+  // --- tensor sizes (dynamic across the 3 methods) ---
+  s+=M(36,92,'(64,1)','start',RED,11,84);                       // cell c
+  s+=M(36,498,'(64,1)','start',RED,11,84);                      // hidden h
+  s+=M(310,536,`(${dM[method]},)`,'start',RED,11,70,'szIn');    // input x
+  s+=M(180,392,'(64,64)','end',RED,11,92);                      // W_h
+  s+=M(316,420,`(64,${dM[method]})`,'start',RED,11,96,'szWx');  // W_x
+  // forget × on long-term line (stage 1)
+  s+=L(250,boxCy-30,250,73,C.blue,1.6);
+  s+=opx(250,60);
+  // input×candidate merge (stages 2 & 3) → sum on green line
+  s+=L(440+30,boxCy,505,boxCy,C.teal,1.6);
+  s+=L(610-30,boxCy,545,boxCy,C.amber,1.6);
+  s+=opx(525,boxCy);
+  s+=L(525,boxCy-14,525,73,C.green,1.6);
+  s+=sumn(525,60);
+  // cell-state value chip (new long-term)
+  s+=vpill(690,60,'vC',C.green);
+  // right: potential short-term (pink tanh) fed by long-term line
+  s+=L(820,60,820,120,C.green,1.6);
+  s+=L(820,120,888,120,C.green,1.6);
+  s+=L(888,120,888,boxCy-30,C.green,1.6);
+  s+=`<text x="888" y="98" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="12" fill="${C.pink}">Potential Short-</text>`;
+  s+=`<text x="888" y="112" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="12" fill="${C.pink}">Term Memory</text>`;
+  s+=scurve(888,boxCy,C.pink);
+  s+=vpill(888+52,boxCy,'vPot',C.pink);
+  // output gate → down to final ×, pink tanh → down to final ×
+  s+=L(790+30,boxCy,845,boxCy,C.purple,1.6);
+  s+=L(845,boxCy,845,360,C.purple,1.6);
+  s+=L(845,360,875,360,C.purple,1.6);
+  s+=L(888,boxCy+30,888,347,C.pink,1.6);
+  s+=opx(888,360);
+  s+=L(888,373,888,magY,C.mag,1.6);
+  s+=vpill(888,432,'vH',C.mag);
+
+  return `<svg viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LSTM cell as memory valves">${s}</svg>`;
+}
+function updateCell(){
+  if(!cellOpen)return;const S=computeState1();
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=(v>=0?' ':'')+v.toFixed(2);};
+  set('vIn',S.x);set('vF',S.F);set('vI',S.I);set('vG',S.G);set('vO',S.O);set('vPot',S.pot);set('vC',S.c);set('vH',S.h);
+  const e1=document.getElementById('szIn'); if(e1)e1.innerHTML=kx('('+dM[method]+',)');
+  const e2=document.getElementById('szWx'); if(e2)e2.innerHTML=kx('(64,'+dM[method]+')');
+  const tint=(col,v)=>{const e=document.getElementById('box_'+col);if(e)e.setAttribute('fill-opacity',(0.06+0.36*Math.max(0,Math.min(1,v))).toFixed(3));};
+  tint(C.blue,S.F);tint(C.teal,S.I);tint(C.amber,Math.abs(S.G));tint(C.purple,S.O);tint(C.pink,Math.abs(S.pot));
+}
+
+function buildHeadSVG(){
+  const A='#8b97a7';
+  const ar=(x1,y1,x2,y2,col)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col||A}" stroke-width="1.4" marker-end="url(#hah)"/>`;
+  const rb=(x,y,w,h,col)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${col}" fill-opacity="0.10" stroke="${col}" stroke-width="1.4"/>`;
+  const tx=(x,y,t,size,col,anchor,weight)=>`<text x="${x}" y="${y}" text-anchor="${anchor||'middle'}" font-family="Inter,system-ui,sans-serif" font-size="${size||12}" font-weight="${weight||400}" fill="${col||C.ink}">${t}</text>`;
+  const szt=(x,y,t,anchor,id)=>`<text ${id?`id="${id}" `:''}x="${x}" y="${y}" text-anchor="${anchor||'start'}" font-family="ui-monospace" font-weight="700" font-size="11" fill="${RED}">${t}</text>`;
+  let s='';
+  // hidden-state stack (one per timestep)
+  const hx=44,hw=86,hh=26, rows=[54,86,118], subs=[1,2,3];
+  s+=tx(87,40,'hidden states',10.5,A,'middle',600);
+  for(let i=0;i<rows.length;i++) s+=rb(hx,rows[i],hw,hh,C.teal)+M(hx+hw/2,rows[i]+hh/2,'h_'+subs[i],'middle',C.ink,13,60);
+  s+=tx(87,160,'⋮',15,C.ink);
+  s+=rb(hx,168,hw,hh,C.teal)+M(hx+hw/2,168+hh/2,'h_T','middle',C.ink,13,60);
+  s+=M(44,210,'h_t:(64,1)','start',RED,11,110);
+  s+=M(44,230,'T=1000\\text{ steps}','start',RED,11,150,'szT');
+  // aggregation
+  const agx=232,agy=96,agw=178,agh=64;
+  for(const y of rows) s+=ar(hx+hw,y+hh/2,agx,agy+agh/2,A);
+  s+=ar(hx+hw,168+hh/2,agx,agy+agh/2,A);
+  s+=rb(agx,agy,agw,agh,C.purple);
+  s+=tx(agx+agw/2,agy+24,'aggregation',12.5,C.ink,'middle',600);
+  s+=M(agx+agw/2,agy+44,'\\rightarrow z \\in \\mathbb{R}^{64}','middle',A,12,150);
+  s+=M(agx+agw/2,agy+agh+16,'z:(64,1)','middle',RED,11,90);
+  // classifier + softmax
+  const clx=468,cly=100,clw=172,clh=56;
+  s+=ar(agx+agw,agy+agh/2,clx,cly+clh/2,A);
+  s+=rb(clx,cly,clw,clh,C.amber);
+  s+=tx(clx+clw/2,cly+22,'classifier + softmax',11.5,C.ink,'middle',600);
+  s+=M(clx+clw/2,cly+40,'\\mathbb{R}^{64} \\rightarrow 8\\ \\text{logits}','middle',A,11,150);
+  s+=M(clx+clw/2,cly+clh+16,'W_{\\text{out}}:(8,64)','middle',RED,11,110);
+  // y-hat bars
+  const bx0=664,base=118,bw=22,pitch=27,winner=3, hts=[16,22,12,72,20,10,17,24];
+  s+=ar(clx+clw,cly+clh/2,bx0-4,base-32,A);
+  s+=M(bx0+pitch*3.5,40,'\\hat{y} = P(y{=}k)','middle',A,12,160);
+  for(let k=0;k<8;k++){const h=hts[k],x=bx0+k*pitch;
+    s+=`<rect x="${x}" y="${base-h}" width="${bw}" height="${h}" rx="2" fill="${k===winner?C.amber:'#3a4350'}"/>`;
+    s+=tx(x+bw/2,base+14,''+k,10,k===winner?C.amber:A);}
+  s+=`<line x1="${bx0-6}" y1="${base}" x2="${bx0+8*pitch-4}" y2="${base}" stroke="#888780" stroke-width="0.5"/>`;
+  s+=M(bx0+8*pitch+6,60,'\\hat{y}:(8,)','start',RED,11,80);
+  s+=M(bx0+8*pitch+6,base,'\\arg\\max \\rightarrow 3','start',C.amber,11,104);
+  // ground-truth one-hot
+  const gy=146,gh=16;
+  for(let k=0;k<8;k++){const x=bx0+k*pitch;
+    s+=`<rect x="${x}" y="${gy}" width="${bw}" height="${gh}" rx="2" fill="${k===winner?C.green:'#0e1117'}" fill-opacity="${k===winner?0.85:1}" stroke="${k===winner?C.green:'#3a4350'}" stroke-width="1"/>`;}
+  s+=tx(bx0+pitch*3.5,gy+gh+15,'target = class index 3',10.5,C.ink,'middle',600);
+  s+=tx(bx0+pitch*3.5,gy+gh+28,'(one-hot only in the math; loss takes the index)',9.5,A);
+  // cross-entropy between ŷ and target
+  s+=`<line x1="${bx0+3*pitch+bw/2}" y1="${base+2}" x2="${bx0+3*pitch+bw/2}" y2="${gy-2}" stroke="${RED}" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#hah)"/>`;
+  s+=M(bx0+8*pitch+6,gy+8,'\\text{cross-entropy}','start',RED,10,110);
+  return `<svg viewBox="0 0 1000 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="classification head"><defs><marker id="hah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>${s}</svg>`;
+}
+function updateHead(){ if(!headOpen) return; const e=document.getElementById('szT'); if(e) e.innerHTML=kx('T='+CFG[method].T+'\\text{ steps}'); }
+
+// ---- controls ----
+function setMethod(m){method=m;document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.m==m));acc=0;syncMethod();drawAll();}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>setMethod(+t.dataset.m)));
+const playBtn=document.getElementById('play');
+playBtn.addEventListener('click',()=>{playing=!playing;
+  document.getElementById('playIco').textContent=playing?'❚❚':'▶';document.getElementById('playTxt').textContent=playing?'Pause':'Play';});
+document.getElementById('reset').addEventListener('click',()=>{cur[method]=0;acc=0;drawAll();});
+document.getElementById('speed').addEventListener('input',e=>{speed=+e.target.value;document.getElementById('spVal').textContent=speed.toFixed(2)+'×';});
+document.getElementById('scrub').addEventListener('input',e=>{cur[method]=+e.target.value;
+  if(playing){playing=false;document.getElementById('playIco').textContent='▶';document.getElementById('playTxt').textContent='Play';}drawAll();});
+
+const lstmBox=document.getElementById('lstmBox'), cellPanel=document.getElementById('cellPanel'), lstmHint=document.getElementById('lstmHint');
+document.getElementById('cellSvgHost').innerHTML=buildCellSVG();
+function setCell(open){cellOpen=open;cellPanel.classList.toggle('open',open);cellPanel.setAttribute('aria-hidden',!open);
+  lstmBox.setAttribute('aria-expanded',open);lstmHint.textContent=open?'▾ click to collapse':'▸ click to open the cell';
+  if(open){updateCell();cellPanel.scrollIntoView({behavior:'smooth',block:'nearest'});}}
+lstmBox.addEventListener('click',()=>setCell(!cellOpen));
+lstmBox.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setCell(!cellOpen);}});
+document.getElementById('cellClose').addEventListener('click',e=>{e.stopPropagation();setCell(false);});
+
+const headBox=document.getElementById('headBox'), headPanel=document.getElementById('headPanel'), headHint=document.getElementById('headHint');
+document.getElementById('headSvgHost').innerHTML=buildHeadSVG();
+function setHead(open){headOpen=open;headPanel.classList.toggle('open',open);headPanel.setAttribute('aria-hidden',!open);
+  headBox.setAttribute('aria-expanded',open);headHint.textContent=open?'▾ click to collapse':'▸ click to open the head';
+  if(open){updateHead();headPanel.scrollIntoView({behavior:'smooth',block:'nearest'});}}
+headBox.addEventListener('click',()=>setHead(!headOpen));
+headBox.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setHead(!headOpen);}});
+document.getElementById('headClose').addEventListener('click',e=>{e.stopPropagation();setHead(false);});
+
+window.addEventListener('resize',fitAll);
+syncMethod();
+fitAll();
+typeset(document.body);
+requestAnimationFrame(loop);
+</script>
