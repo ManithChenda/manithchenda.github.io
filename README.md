@@ -416,15 +416,47 @@ build locally, nothing to upload.
 
 ## Licensing
 
-There is no `LICENSE` file, so this is **all rights reserved** by default: you may
-view and fork the repo on GitHub, but not reuse the code elsewhere.
+Two different things live in this repo, and they come with different intentions.
 
-If you want to reuse the build, ask — or, if you are adapting this README for your
-own site, the usual split for a personal site is MIT for the code (`_layouts/`,
-`_includes/`, `assets/css/`, `assets/js/`, `viz/*.html`) and all-rights-reserved or
-CC BY-NC for the content (`_data/*.yml`, `_posts/`, `assets/*.png`). Putting MIT on
-the whole repo would let anyone republish the bio, CV, posts and portrait verbatim
-under their own name.
+**The design and the machinery — you're welcome to them.** The terminal aesthetic,
+the two-language URL tree, the theme toggle, the layout and the build:
+
+```
+_layouts/   _includes/   _config.yml   _data/nav.yml
+assets/css/site.css      assets/js/toggles.js
+index.html … viz.html    km/*.html
+```
+
+If any of it is useful to you, please clone it and make it your own.
+
+**The content is personal, so I'd ask you not to reuse it.** Everything that makes
+this site *about me*:
+
+```
+_data/*.yml (except nav.yml)   _posts/   assets/portrait_green*.png   viz/*.html
+```
+
+That covers the bio, CV, publications, teaching and talks, the book notes, the blog
+posts in both languages, the portraits, and the interactive visualizations.
+
+The visualizations are the easiest to mistake, so just to be clear about them: they
+are `.html` files sitting right next to the machinery, but they belong with the
+content — each one is an original piece of work, closer to a figure in a paper than
+to a stylesheet. You are very welcome to take the gallery *mechanism*, though: the
+tile grid, the `_data/vizzes.yml` pattern and the glyph system are part of the
+design, and they are happy to hold someone else's artifacts.
+
+If you are ever unsure which side something falls on, please just ask.
+
+### There is no `LICENSE` file yet
+
+Until there is, the legal default applies to all of it: all rights reserved. You can
+view and fork the repo on GitHub, but the invitation above is a statement of intent
+rather than a formal license.
+
+Making it binding would take a `LICENSE` file granting a permissive license (MIT or
+similar) over the design and machinery paths, alongside an explicit reservation over
+the content paths — with a pointer to it from here.
 
 ## Credits
 
