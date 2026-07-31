@@ -36,6 +36,7 @@ defaults:
 exclude:
   - README.md
   - HANDOFF_README.md
+  - VIZ_ARTIFACT_GUIDE.md
   - Gemfile
   - Gemfile.lock
   - reference/

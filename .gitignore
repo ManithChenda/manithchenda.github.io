@@ -9,5 +9,6 @@ Gemfile.lock
 
 # User specific
 HANDOFF_README.md
+VIZ_ARTIFACT_GUIDE.md
 .claude/
 reference/

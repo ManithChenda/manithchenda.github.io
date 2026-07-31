@@ -197,6 +197,72 @@ Rules that matter:
   switch on that post will 404, so point `alt_url` at `/blog/` (or `/km/blog/`)
   instead.
 
+### Adding a viz artifact
+
+An artifact is a standalone interactive page — canvas or SVG plus a few controls —
+served at `/viz/<name>.html` and linked from the `~/viz` gallery. It is **not** a
+Jekyll page: no layout, no front matter, nothing inherited from the site. Jekyll
+copies it to the published site byte-for-byte.
+
+**1. Write the file** to `viz/<snake_case_name>.html`. The quickest start is to copy
+`viz/waveform.html` and replace its draw loop — it is the smallest complete example.
+Four rules matter:
+
+- **No YAML front matter.** The file must begin with `<!doctype html>`. Jekyll copies
+  files *without* front matter verbatim; add front matter and it renders the file
+  through Liquid, where any `{{` or `{%` in your JavaScript is parsed as a template
+  tag and the build breaks or silently mangles the code.
+- **Start with a doctype.** Without one, browsers use quirks mode and layout differs
+  subtly from standards mode.
+- **Include a back-link** in the header, exactly `<a href="./">cd ../viz</a>`. It
+  resolves to the gallery and survives a `baseurl` change. Without it the artifact is
+  a dead end, since tiles open in a new tab.
+- **Keep it self-contained.** Inline all CSS and JS; no CDN, no font link, no build
+  step. (`viz/audio_to_lstm.html` loads KaTeX from a CDN — a deliberate exception,
+  not the pattern.)
+
+Artifacts are dark-only — the site's theme toggle does not reach them. Match the
+palette in `viz/waveform.html` and use `'JetBrains Mono', ui-monospace, monospace`.
+Set the file mode to `644`.
+
+**2. Register the tile** in `_data/vizzes.yml`:
+
+```yaml
+- href: "/viz/my_artifact.html"
+  kind: "wave"
+  en:
+    title: "my_artifact"
+    desc: "One sentence: what a visitor learns by opening it."
+  km:
+    title: "my_artifact"
+    desc: "<Khmer translation>"
+```
+
+- `href` — root-relative with a leading slash. It passes through `relative_url`, so
+  the `baseurl` prefix is added for you. Never hardcode the domain.
+- `kind` — the preview glyph, and **must** be one of `wave`, `spectro`, `harmo`,
+  `lstm`. An unrecognised value renders an empty preview area with no error, so the
+  tile just looks broken. To add a new glyph, add a `{% when %}` branch in
+  `_includes/views/viz.html`, stroked with `var(--accent)` so it follows both themes.
+- Both `en:` and `km:` are required — a missing `km:` block gives a blank tile on
+  `/km/viz/`.
+
+Order in the file is display order on the page.
+
+**3. Check it**, then push:
+
+```bash
+chmod 644 viz/my_artifact.html && bundle exec jekyll build
+cmp viz/my_artifact.html _site/viz/my_artifact.html   # must report no difference
+```
+
+`cmp` passing proves Jekyll copied the file rather than processing it. Also confirm
+the tile appears *with a glyph* in both `_site/viz/index.html` and
+`_site/km/viz/index.html`, and that `cd ../viz` returns to the gallery.
+
+If the live gallery still shows the old tiles a few minutes after pushing, hard-reload
+before debugging — it is usually browser cache, not the build.
+
 ### Design tokens
 
 Colours (both themes), the type scale and spacing are CSS custom properties at the
