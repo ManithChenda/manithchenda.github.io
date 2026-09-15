@@ -1,5 +1,13 @@
 # Migrated verbatim from reference/strings.js (window.SITE.publications)
 # `link: ""` renders without the [ view ↗ ] affordance.
+- year: "2026"
+  venue: "Conference on Electronics, Semiconductor, and AI (CEASAI), 2026, pp. 108-109"
+  authors: "M. Chenda, S. Park"
+  en:
+    title: "Ultrasonic Echo Discrimination using Active SONAR"
+  km:
+    title: "Ultrasonic Echo Discrimination using Active SONAR"
+
 - year: "2021"
   venue: "Journal of the College of Education, Yokohama National Univ., Educational Sciences, vol. 4, pp. 67–72"
   authors: "M. Chenda, A. Kitagawa, T. Akamatsu"
