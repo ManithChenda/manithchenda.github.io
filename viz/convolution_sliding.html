@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz · convolution sliding</title>
+<style>
+  :root{--bg:#16181a;--fg:#c3c9c1;--dim:#8a918a;--muted:#6b726a;--accent:#6fce9a;--border:#2b2f31;--head:#e8ece6;--panel:#1c1f21}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font-family:'JetBrains Mono',ui-monospace,monospace;
+       min-height:100vh;display:flex;flex-direction:column;
+       -webkit-font-smoothing:antialiased}
+  header{display:flex;justify-content:space-between;align-items:center;
+         padding:16px 24px;border-bottom:1px solid var(--border);font-size:13px}
+  header a{color:var(--accent);text-decoration:none}
+  header a:hover{text-decoration:underline;text-underline-offset:3px}
+  h1{font-size:14px;font-weight:700;margin:0;color:var(--head)}
+  main{flex:1;display:flex;flex-direction:column;gap:16px;padding:20px 24px 24px}
+  canvas{width:100%;flex:1;min-height:440px;background:#111314;border:1px solid var(--border);border-radius:8px}
+  .ctl{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--dim)}
+  .ctl label{display:flex;gap:8px;align-items:center}
+  input[type=range]{accent-color:var(--accent)}
+  input[type=checkbox]{accent-color:var(--accent)}
+  button{background:var(--panel);color:var(--fg);border:1px solid var(--border);
+         border-radius:6px;padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--head)}
+  button.active{background:rgba(111,206,154,0.14);border-color:var(--accent);color:var(--accent)}
+  .seg{display:flex;gap:6px}
+  .note{font-size:11.5px;color:var(--dim);max-width:78ch;line-height:1.7}
+  kbd{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:0 5px;color:var(--fg);font-size:10.5px}
+</style>
+</head>
+<body>
+<header><h1>convolution_sliding.js</h1><a href="./">cd ../viz</a></header>
+<main>
+  <canvas id="c"></canvas>
+  <div class="ctl">
+    <div class="seg">
+      <button id="m1" class="active">1-D</button>
+      <button id="m2">2-D</button>
+    </div>
+    <button id="play">▶ play</button>
+    <button id="restart">⟲ restart</button>
+    <button id="prev">‹ prev</button>
+    <button id="next">next ›</button>
+    <label>speed <input id="speed" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
+    <label>position <input id="scrub" type="range" min="0" max="5" step="1" value="0"></label>
+    <label><input id="loop" type="checkbox"> loop</label>
+  </div>
+  <p class="note">A convolution layer slides one small kernel of learned weights across its
+    input, and at every stop it computes a single multiply-accumulate: each overlapped input
+    value is multiplied by the aligned weight and the products are summed into one output
+    number. <b>1-D</b> treats a raw echo waveform (1&times;8) as a time series and slides a
+    3-tap kernel along time. <b>2-D</b> treats a spectrogram patch (6&times;6) as an image and
+    slides a 3&times;3 kernel over time and frequency at once. Switch modes with the
+    <b>1-D</b>/<b>2-D</b> buttons; <b>play</b> animates the slide, <b>prev</b>/<b>next</b> and
+    the <b>position</b> slider step through every output cell, and the equation shows exactly
+    which products form the highlighted result. Both kernels here are fixed edge detectors so
+    the arithmetic stays checkable — in a trained network these weights are what learning
+    adjusts. Keys: <kbd>space</kbd> play/pause, <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> step.</p>
+</main>
+<script>
+// ── data ──────────────────────────────────────────────────────────────────
+const IN1 = [2,5,8,6,1,-3,-5,-2];
+const K1  = [0.5,-1.0,0.5];
+const OUT1 = [];
+for(let j=0;j<IN1.length-K1.length+1;j++)
+  OUT1.push(IN1[j]*K1[0]+IN1[j+1]*K1[1]+IN1[j+2]*K1[2]);
+
+const IN2 = [
+  [7,0,1,2,1,7],
+  [7,5,0,0,2,3],
+  [5,4,2,1,6,6],
+  [0,1,4,3,7,4],
+  [3,3,5,5,1,6],
+  [6,8,7,2,2,5]];
+const K2 = [[0,-1,0],[-1,4,-1],[0,-1,0]];
+const OUT2 = [];
+for(let r=0;r<4;r++){const row=[];for(let cc=0;cc<4;cc++){
+  let s=0;for(let i=0;i<3;i++)for(let j=0;j<3;j++)s+=IN2[r+i][cc+j]*K2[i][j];
+  row.push(s);}OUT2.push(row);}
+
+// ── palette (canvas) ──────────────────────────────────────────────────────
+const COL = {
+  border:'#3a4048', fg:'#c3c9c1', head:'#e8ece6', dim:'#8a918a', muted:'#6b726a',
+  win:'#e0913c', ker:'#6ba0e0', kerTx:'#a8c6ee', out:'#6fce9a', empty:'#262a2c'
+};
+
+// ── state ─────────────────────────────────────────────────────────────────
+let mode='1d', pos=0, p=1, playing=false, speed=1;
+let last=null, dpr=1;
+const slideEnd=0.38, commitAt=0.86, stepDur=1600;
+const maxPos = ()=> mode==='1d' ? OUT1.length-1 : 15;
+
+// ── canvas setup ──────────────────────────────────────────────────────────
+const c=document.getElementById('c'), x=c.getContext('2d');
+let W=0,H=0;
+function resize(){dpr=Math.max(1,window.devicePixelRatio||1);
+  c.width=c.clientWidth*dpr; c.height=c.clientHeight*dpr;}
+addEventListener('resize',resize);
+if(window.ResizeObserver) new ResizeObserver(resize).observe(c);
+resize();
+
+// ── helpers ───────────────────────────────────────────────────────────────
+const lerp=(a,b,t)=>a+(b-a)*t;
+const ease=t=>t*t*(3-2*t);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmtK=v=>(v>=0?'+':'-')+Math.abs(v).toFixed(1);
+const fmtF=v=>(v>=0?'+':'-')+Math.abs(v).toFixed(1);
+const fmtI=v=>(v>=0?'+':'')+v;
+
+function rr(X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);
+  x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);
+  x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+
+function txt(t,X,Y,o){o=o||{};
+  x.font=`${o.bold?'700 ':''}${o.size||13}px 'JetBrains Mono',ui-monospace,monospace`;
+  x.fillStyle=o.col||COL.fg; x.textAlign=o.align||'center';
+  x.textBaseline=o.baseline||'middle'; x.fillText(t,X,Y);}
+
+function fitText(t,X,Y,maxW,size,col,bold){
+  bold=bold!==false; let fs=size;
+  const setF=()=>x.font=`${bold?'700 ':''}${fs}px 'JetBrains Mono',ui-monospace,monospace`;
+  setF(); while(x.measureText(t).width>maxW&&fs>8){fs-=0.5;setF();}
+  txt(t,X,Y,{size:fs,col:col,bold:bold});}
+
+function cell(X,Y,w,h,t,o){o=o||{};
+  rr(X,Y,w,h,Math.min(8,w*0.14));
+  if(o.fill){x.fillStyle=o.fill;x.fill();}
+  x.lineWidth=1.6; x.strokeStyle=o.border||COL.border; x.stroke();
+  if(t!==''&&t!=null)
+    txt(t,X+w/2,Y+h/2,{size:o.size||Math.min(h*0.36,18),col:o.tc||COL.fg,bold:o.bold});}
+
+function phase(){
+  const compP=clamp((p-slideEnd)/(1-slideEnd),0,1);
+  const committed=p>=commitAt;
+  const sliding=playing&&p<slideEnd&&pos>0;
+  return {compP,committed,sliding};
+}
+
+// ── 1-D view ──────────────────────────────────────────────────────────────
+function draw1D(){
+  const {compP,committed,sliding}=phase();
+  const pad=40, n=8, availW=W-pad*2, unit=availW/n;
+  const s=Math.min(unit*0.8,64), gap=Math.min(unit*0.2,16), step=s+gap;
+  const contentW=n*s+(n-1)*gap, x0=(W-contentW)/2;
+  const blockH=3*s+112, inY=Math.max(32,(H-blockH)/2);
+  const kerY=inY+s+46, eqY=kerY+s+36, outY=eqY+30;
+  let wf=pos; if(sliding) wf=lerp(pos-1,pos,ease(p/slideEnd));
+
+  txt('input',x0,inY-11,{size:11,col:COL.muted,align:'left',baseline:'alphabetic'});
+  for(let i=0;i<n;i++){
+    const inWin=i>=pos&&i<pos+3;
+    cell(x0+i*step,inY,s,s,IN1[i], inWin
+      ?{border:COL.win,fill:`rgba(224,145,60,${0.12+0.12*compP})`,tc:COL.head,bold:true}
+      :{border:COL.border,tc:COL.fg});
+  }
+
+  const kx0=x0+wf*step;
+  txt('kernel',kx0,kerY-11,{size:11,col:COL.ker,align:'left',baseline:'alphabetic'});
+  for(let i=0;i<3;i++){
+    const cx=kx0+i*step;
+    if(compP>0.03){x.save();x.setLineDash([2,3]);
+      x.strokeStyle=`rgba(224,145,60,${0.55*compP})`;x.lineWidth=1;
+      x.beginPath();x.moveTo(cx+s/2,inY+s);x.lineTo(cx+s/2,kerY);x.stroke();x.restore();}
+    cell(cx,kerY,s,s,fmtK(K1[i]),{border:COL.ker,fill:'rgba(107,160,224,0.13)',tc:COL.kerTx,bold:true});
+  }
+
+  const terms=[0,1,2].map(i=>`(${IN1[pos+i]})(${fmtK(K1[i])})`);
+  const nShow=clamp(Math.floor(compP*3.4),0,3);
+  let eq=terms.slice(0,nShow).join('   +   ');
+  if(compP>0.72) eq+=(eq?'    =    ':'')+fmtF(OUT1[pos]);
+  if(eq) fitText(eq,W/2,eqY,contentW,16,COL.head);
+
+  txt('output',x0,outY-11,{size:11,col:COL.muted,align:'left',baseline:'alphabetic'});
+  for(let j=0;j<OUT1.length;j++){
+    const done=j<pos||(j===pos&&committed), cur=j===pos;
+    cell(x0+j*step,outY,s,s, done?fmtF(OUT1[j]):'', {
+      border: (cur||done)?COL.out:COL.empty,
+      fill:(cur&&committed)?'rgba(111,206,154,0.18)':null,
+      tc:COL.out, bold:cur});
+  }
+
+  if(committed){
+    const cx=x0+pos*step+s/2;
+    x.strokeStyle=COL.out;x.fillStyle=COL.out;x.lineWidth=1.8;
+    x.beginPath();x.moveTo(cx,eqY+15);x.lineTo(cx,outY-7);x.stroke();
+    x.beginPath();x.moveTo(cx-4.5,outY-11);x.lineTo(cx+4.5,outY-11);x.lineTo(cx,outY-4);x.closePath();x.fill();
+  }
+  txt(`output position ${pos+1} of ${OUT1.length}`,W/2,outY+s+24,{size:11,col:COL.muted});
+}
+
+// ── 2-D view ──────────────────────────────────────────────────────────────
+function draw2D(){
+  const {compP,committed,sliding}=phase();
+  const pad=28, availW=W-pad*2;
+  let cc=clamp((availW-148)/13,14,40);
+  let symW=Math.min(30,cc*0.9), gapG=Math.min(22,cc*0.7);
+  cc=clamp((availW-2*symW-4*gapG)/13,12,40);
+  const totalW=13*cc+2*symW+4*gapG, x0=(W-totalW)/2;
+  const inX=x0, kerX=inX+6*cc+gapG+symW+gapG, outX=kerX+3*cc+gapG+symW+gapG;
+  const gridsH=6*cc, arithH=56;
+  const inY=Math.max(28,(H-(gridsH+arithH+30))/2);
+  const midY=inY+3*cc, kerY=midY-1.5*cc, outY=midY-2*cc;
+
+  const r=Math.floor(pos/4), cl=pos%4;
+  let wr=r, wc=cl;
+  if(sliding){const pr=Math.floor((pos-1)/4),pc=(pos-1)%4,e=ease(p/slideEnd);
+    wr=lerp(pr,r,e); wc=lerp(pc,cl,e);}
+
+  txt('input',inX,inY-9,{size:11,col:COL.muted,align:'left',baseline:'alphabetic'});
+  txt('kernel',kerX,kerY-9,{size:11,col:COL.ker,align:'left',baseline:'alphabetic'});
+  txt('output',outX,outY-9,{size:11,col:COL.muted,align:'left',baseline:'alphabetic'});
+
+  for(let i=0;i<6;i++)for(let j=0;j<6;j++){
+    const inWin=i>=r&&i<r+3&&j>=cl&&j<cl+3;
+    cell(inX+j*cc,inY+i*cc,cc,cc,IN2[i][j], inWin
+      ?{border:COL.win,fill:`rgba(224,145,60,${0.12+0.12*compP})`,tc:COL.head,bold:true,size:cc*0.4}
+      :{border:COL.border,tc:COL.fg,size:cc*0.4});
+  }
+  if(sliding){x.save();x.strokeStyle=COL.win;x.lineWidth=2.2;
+    rr(inX+wc*cc,inY+wr*cc,3*cc,3*cc,8);x.stroke();x.restore();}
+
+  txt('*',inX+6*cc+gapG+symW/2,midY,{size:20,col:COL.dim});
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+    const kv=K2[i][j], nz=kv!==0;
+    cell(kerX+j*cc,kerY+i*cc,cc,cc,fmtK(kv),{
+      border:COL.ker, fill: nz?'rgba(107,160,224,0.14)':'rgba(107,160,224,0.05)',
+      tc: nz?COL.kerTx:COL.muted, bold:nz, size:cc*0.38});
+  }
+  txt('=',kerX+3*cc+gapG+symW/2,midY,{size:20,col:COL.dim});
+
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++){
+    const idx=i*4+j, done=idx<pos||(idx===pos&&committed), cur=idx===pos;
+    cell(outX+j*cc,outY+i*cc,cc,cc, done?fmtI(OUT2[i][j]):'', {
+      border:(cur||done)?COL.out:COL.empty,
+      fill:(cur&&committed)?'rgba(111,206,154,0.20)':null,
+      tc:COL.out, bold:cur, size:cc*0.38});
+  }
+
+  const order=[[0,1],[1,0],[1,1],[1,2],[2,1]];
+  const terms=order.map(([di,dj])=>`(${IN2[r+di][cl+dj]})(${fmtK(K2[di][dj])})`);
+  const nShow=clamp(Math.floor(compP*5.6),0,5);
+  const ay=inY+gridsH+28;
+  fitText('non-zero terms:    '+terms.slice(0,nShow).join('    '),W/2,ay,availW,13,COL.fg,false);
+  if(compP>0.8) txt(`sum = ${fmtI(OUT2[r][cl])}`,W/2,ay+25,{size:15,col:COL.out,bold:true});
+  txt(`window row ${r+1}, col ${cl+1}    |    output cell ${pos+1} of 16`,W/2,ay+50,{size:11,col:COL.muted});
+}
+
+// ── loop ──────────────────────────────────────────────────────────────────
+function update(dt){
+  if(!playing) return;
+  p += dt/(stepDur/speed);
+  if(p>=1){
+    if(pos<maxPos()){pos++; p=0;}
+    else if($('loop').checked){pos=0; p=0;}
+    else{p=1; playing=false; syncPlay();}
+  }
+}
+function frame(now){
+  if(last==null) last=now;
+  const dt=Math.min(100,now-last); last=now;
+  update(dt);
+  x.setTransform(dpr,0,0,dpr,0,0);
+  W=c.clientWidth; H=c.clientHeight;
+  x.clearRect(0,0,W,H);
+  txt(mode==='1d'?'1-D convolution — kernel slides along time'
+                 :'2-D convolution — kernel slides over time and frequency',
+      W/2,22,{size:14,col:COL.head,bold:true});
+  if(mode==='1d') draw1D(); else draw2D();
+  $('scrub').value=pos;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ── controls ──────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+function syncPlay(){$('play').textContent=playing?'⏸ pause':'▶ play';}
+function setMode(m){mode=m; pos=0; p=1; playing=false;
+  $('m1').classList.toggle('active',m==='1d');
+  $('m2').classList.toggle('active',m==='2d');
+  $('scrub').max=maxPos(); $('scrub').value=0; syncPlay();}
+$('m1').onclick=()=>setMode('1d');
+$('m2').onclick=()=>setMode('2d');
+$('play').onclick=()=>{ if(!playing){ if(pos>=maxPos()&&p>=1){pos=0;p=0;} playing=true;} else playing=false; syncPlay();};
+$('restart').onclick=()=>{pos=0;p=0;playing=true;syncPlay();};
+$('prev').onclick=()=>{playing=false;pos=Math.max(0,pos-1);p=1;syncPlay();};
+$('next').onclick=()=>{playing=false;pos=Math.min(maxPos(),pos+1);p=1;syncPlay();};
+$('speed').oninput=e=>speed=+e.target.value;
+$('scrub').oninput=e=>{playing=false;pos=clamp(+e.target.value,0,maxPos());p=1;syncPlay();};
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();$('play').onclick();}
+  else if(e.code==='ArrowRight'){e.preventDefault();$('next').onclick();}
+  else if(e.code==='ArrowLeft'){e.preventDefault();$('prev').onclick();}
+});
+</script>
+</body>
+</html>

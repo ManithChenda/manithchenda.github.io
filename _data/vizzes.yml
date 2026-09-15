@@ -4,6 +4,17 @@
 #   wave | spectro | harmo | lstm | conv
 # An unrecognised value renders an empty preview area, not an error.
 
+
+
+- href: "/viz/audio_to_lstm.html"
+  kind: "lstm"
+  en:
+    title: "audio_to_lstm"
+    desc: "How one audio becomes a sequence of vectors an LSTM can read."
+  km:
+    desc: "ដំណើរការនៃការបម្លែងរលកសញ្ញានៃសំឡេងទៅជាទិន្នន័យមានលំដាប់សម្រាប់ LSTM"
+    title: "audio_to_lstm"
+
 - href: "/viz/image_conv2d.html"
   kind: "conv"
   en:
@@ -14,14 +25,15 @@
     title: "image_conv2d"
     desc: "ដំណើរការនៃការដាក់ 2D convolution លើរូបភាពមានពណ៌"
 
-- href: "/viz/audio_to_lstm.html"
-  kind: "lstm"
+- href: "/viz/convolution_sliding.html"
+  kind: "conv"
   en:
-    title: "audio_to_lstm"
-    desc: "How one audio becomes a sequence of vectors an LSTM can read."
+    title: "convolution_sliding"
+    desc: "Process of convolution sliding over 1D and 2D inputs"
+
   km:
-    desc: "ដំណើរការនៃការបម្លែងរលកសញ្ញានៃសំឡេងទៅជាទិន្នន័យមានលំដាប់សម្រាប់ LSTM"
-    title: "audio_to_lstm"
+    title: "convolution_sliding"
+    desc: "ដំណើរការនៃការអូស convolution លើវ៉ិចទ័រនិងម៉ាទ្រីស"
 
 - href: "/viz/waveform.html"
   kind: "wave"
