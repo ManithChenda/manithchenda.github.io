@@ -1,24 +1,40 @@
 # Migrated verbatim from reference/strings.js (window.SITE.talks)
-- date: "2025-11"
+- date: "2026-01"
   en:
-    title: "What Machines Miss When They Listen"
-    event: "Panel · Cambodia AI Forum, Phnom Penh"
+    title: "AI in Finace"
+    event: "Talk & Panel · Workshop on AI in Finance · Phnom Penh, Cambodia"
   km:
-    title: "អ្វីដែលម៉ាស៊ីនខកខាននៅពេលវាស្តាប់"
-    event: "វេទិកា · វេទិកា AI កម្ពុជា ភ្នំពេញ"
+    title: "បញ្ញាសិប្បនិម្មិតក្នុងវិស័យហិរញ្ញវត្ថុ"
+    event: "បទបង្ហាញនិងវេទិកាពិភាក្សា · សិក្ខាសាលាស្ដីពីបញ្ញាសិប្បនិម្មិតក្នុងវិស័យហិរញ្ញវត្ថុ​ · ភ្នំពេញ កម្ពុជា"
 
-- date: "2025-06"
+- date: "2024-08"
   en:
-    title: "From Firmware to Foundation Models"
-    event: "Guest lecture · Kangwon National University"
+    title: "Bridging Innovations: ASEAN's Future of Technology Transfer & Collaboration"
+    event: "Talk & Panel · Indonesia Research & Innovation (InaRI) Expo 2024 · Bogor, Indonesia"
   km:
-    title: "ពី Firmware ទៅ Foundation Models"
-    event: "បង្រៀនកិត្តិយស · សាកលវិទ្យាល័យជាតិកាំងវ៉ុន"
+    title: "តភ្ជាប់នវានុវត្តន៍៖ អនាគតនៃការផ្ទេរបច្ចេកវិទ្យានិងកិច្ចសហប្រតិបត្តិការនៅអាស៊ាន"
+    event: "បទបង្ហាញនិងវេទិកាពិភាក្សា · ពិព័រណ៍ស្រាវជ្រាវនិងនវានុវត្តន៍ឥណ្ឌូនេស៊ី ឆ្នាំ២០២៤ · បូហ្គរ ឥណ្ឌូនេស៊ី"
 
-- date: "2024-09"
+- date: "2023-11"
   en:
-    title: "Building Hardware in Cambodia"
-    event: "Talk · FabLab-ITC Open Day"
+    title: "Draft Proof of Concept of the ASEAN Technology Management Hub"
+    event: "Talk · The 3rd EU-ASEAN Workshop on ASEAN Technology Management Hub · Phnom Penh, Cambodia"
   km:
-    title: "ការបង្កើតផ្នែករឹងនៅកម្ពុជា"
-    event: "បទបង្ហាញ · ថ្ងៃបើកចំហ FabLab-ITC"
+    title: "សេចក្ដីព្រាងអំពីលទ្ធភាពនៃទស្សានាទាននៃថ្នាលគ្រប់គ្រងបច្ចេកវិទ្យាអាស៊ាន"
+    event: "បទបង្ហាញ · សិក្ខាសាលាអាស៊ាន-អឺរ៉ុប លើកទី៣ ស្ដីពីថ្នាលគ្រប់គ្រងបច្ចេកវិទ្យាអាស៊ាន · ភ្នំពេញ កម្ពុជា"
+
+- date: "2023-08"
+  en:
+    title: "Innovative Technologies in Achieving Carbon Neutrality Towards ASEAN Green Economy"
+    event: "Talk & Panel · ASEAN-Japan Innovation Week · Bangkok, Thailand"
+  km:
+    title: "បច្ចេកវិទ្យានវានុវត្តន៍សម្រេាប់សម្រេចអាព្យាក្រឹតកាបូនដើម្បីឈ្ពោះទៅកាន់សេដ្ឋកិច្ចបៃតងនៃអាស៊ាន"
+    event: "បទបង្ហាញនិងវេទិកាពិភាក្សា · សប្ដាហ៍នវានុវត្តន៍ អាស៊ាន-ជប៉ុន · បាំងកក ថៃ"
+
+- date: "2023-02"
+  en:
+    title: "ASEAN Technology Management Hub Platform"
+    event: "Talk · The 1st EU-ASEAN Workshop on ASEAN Technology Management Hub · Jakarta, Indonesia"
+  km:
+    title: "ថ្នាលគ្រប់គ្រងបច្ចេកវិទ្យាអាស៊ាន"
+    event: "បទបង្ហាញ · សិក្ខាសាលាអាស៊ាន-អឺរ៉ុប លើកទី១ ស្ដីពីថ្នាលគ្រប់គ្រងបច្ចេកវិទ្យាអាស៊ាន · ហ្សាការតា ឥណ្ឌូនេស៊ី"
