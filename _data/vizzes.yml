@@ -1,12 +1,19 @@
 # Migrated verbatim from reference/strings.js (window.SITE.vizzes)
 #
 # `kind` selects the inline SVG glyph shown in the tile preview:
-#   wave | spectro | harmo | lstm
+#   wave | spectro | harmo | lstm | conv
 # An unrecognised value renders an empty preview area, not an error.
-#
-# TODO(owner): the beat_frequencies, vowel_space and phase_portrait tiles still
-# point at the three original artifacts, reused. Build the real artifacts under
-# viz/, then repoint `href` below.
+
+- href: "/viz/image_conv2d.html"
+  kind: "conv"
+  en:
+    title: "image_conv2d"
+    desc: "Process of applyig a 2D convolution on a color image"
+
+  km:
+    title: "image_conv2d"
+    desc: "ដំណើរការនៃការដាក់ 2D convolution លើរូបភាពមានពណ៌"
+
 - href: "/viz/audio_to_lstm.html"
   kind: "lstm"
   en:

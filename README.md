@@ -241,7 +241,7 @@ Set the file mode to `644`.
 - `href` — root-relative with a leading slash. It passes through `relative_url`, so
   the `baseurl` prefix is added for you. Never hardcode the domain.
 - `kind` — the preview glyph, and **must** be one of `wave`, `spectro`, `harmo`,
-  `lstm`. An unrecognised value renders an empty preview area with no error, so the
+  `lstm`, `conv`. An unrecognised value renders an empty preview area with no error, so the
   tile just looks broken. To add a new glyph, add a `{% when %}` branch in
   `_includes/views/viz.html`, stroked with `var(--accent)` so it follows both themes.
 - Both `en:` and `km:` are required — a missing `km:` block gives a blank tile on

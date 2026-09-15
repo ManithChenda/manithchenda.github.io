@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz · conv2d walkthrough</title>
+<style>
+  :root{
+    --bg:#16181a;--panel:#1c1f21;--border:#2b2f31;--fg:#c3c9c1;--head:#e8ece6;
+    --dim:#8a918a;--muted:#6b726a;--accent:#6fce9a;--accent2:#9ff0c1;
+    --red:#e0796b;--grn:#6fce9a;--blu:#6fa8e0
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font-family:'JetBrains Mono',ui-monospace,monospace;
+       min-height:100vh;display:flex;flex-direction:column;
+       -webkit-font-smoothing:antialiased}
+  header{display:flex;justify-content:space-between;align-items:center;
+         padding:16px 24px;border-bottom:1px solid var(--border);font-size:13px}
+  header a{color:var(--accent);text-decoration:none}
+  header a:hover{text-decoration:underline;text-underline-offset:3px}
+  h1{font-size:14px;font-weight:700;margin:0;color:var(--head)}
+  main{flex:1;display:flex;flex-direction:column;gap:16px;padding:24px;max-width:1240px;width:100%;margin:0 auto}
+  canvas{width:100%;aspect-ratio:1180/850;height:auto;background:#111314;
+         border:1px solid var(--border);border-radius:8px}
+  .ctl{display:flex;gap:22px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--dim)}
+  .ctl label{display:flex;gap:9px;align-items:center;white-space:nowrap}
+  .ctl .val{color:var(--accent2);min-width:2ch;text-align:right}
+  input[type=range]{accent-color:var(--accent)}
+  button{font-family:inherit;font-size:12px;background:var(--panel);color:var(--fg);
+         border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--head)}
+  .formula{font-size:13px;color:var(--fg);background:var(--panel);border:1px solid var(--border);
+           border-radius:8px;padding:12px 16px;line-height:1.9;max-width:100%}
+  .formula b{color:var(--accent2);font-weight:700}
+  .formula .cur{color:var(--head)}
+  .note{font-size:11.5px;color:var(--dim);max-width:74ch;line-height:1.7}
+</style>
+</head>
+<body>
+<header><h1>conv2d_walkthrough.js</h1><a href="./">cd ../viz</a></header>
+<main>
+  <canvas id="c"></canvas>
+
+  <div class="ctl">
+    <button id="play">⏸ pause</button>
+    <button id="step">⏭ step</button>
+    <label>speed <input id="spd" type="range" min="1" max="20" value="4"><span class="val" id="spdv">4</span></label>
+    <label>filter <input id="flt" type="range" min="1" max="32" value="1"><span class="val" id="fltv">1</span></label>
+    <label>kernel K <input id="k" type="range" min="1" max="7" step="2" value="3"><span class="val" id="kv">3</span></label>
+    <label>stride S <input id="s" type="range" min="1" max="4" value="1"><span class="val" id="sv">1</span></label>
+    <label>padding P <input id="p" type="range" min="0" max="3" value="0"><span class="val" id="pv">0</span></label>
+  </div>
+
+  <div class="formula" id="formula"></div>
+
+  <p class="note">
+    One 3&times;3&times;3 filter slides over the (3&times;32&times;32) RGB input. Its three
+    kernels are applied to R, G and B; each produces a partial sum, the three are added
+    together with the single per-filter bias, and the result becomes one cell of the
+    output feature map. Repeat over every position &rarr; one 30&times;30 map; repeat over
+    all 32 filters &rarr; a (32&times;30&times;30) output volume. Drag <b>filter</b> to change
+    the weights, and <b>K / S / P</b> to see how the output size formula responds. Use
+    <b>step</b> to advance one position at a time.
+  </p>
+</main>
+
+<script>
+"use strict";
+const CVS = document.getElementById('c'), X = CVS.getContext('2d');
+const DW = 1180, DH = 850;                 // design (logical) canvas size
+const W = 32, C = 3, NF = 32;              // input 3x32x32, 32 filters
+const CHN = ['R','G','B'];
+
+const St = { K:3, stride:1, pad:0, filter:1, pos:0, playing:true, cps:4 };
+
+/* ---------- input image, normalized to [0,1] ---------- */
+const img = [];
+for(let ch=0; ch<C; ch++){
+  img[ch] = [];
+  for(let r=0; r<W; r++){
+    img[ch][r] = [];
+    for(let cc=0; cc<W; cc++){
+      let v;
+      if(ch===0) v = 0.5 + 0.5*Math.sin(cc/5.0);
+      else if(ch===1) v = 0.5 + 0.5*Math.sin(r/6.0 + 1.0);
+      else v = 0.5 + 0.5*Math.cos((r+cc)/7.0);
+      img[ch][r][cc] = Math.max(0, Math.min(1, v));
+    }
+  }
+}
+
+/* ---------- deterministic RNG per filter ---------- */
+function lcg(seed){ let s = seed>>>0; return ()=>{ s = (1664525*s + 1013904223)>>>0; return s/4294967296; }; }
+
+let ker = [], bias = 0;
+function buildFilter(){
+  const rnd = lcg(((St.filter*2654435761) ^ (St.K*40503) ^ 0x9e3779b9)>>>0);
+  ker = [];
+  for(let ch=0; ch<C; ch++){
+    ker[ch] = [];
+    for(let i=0; i<St.K; i++){
+      ker[ch][i] = [];
+      for(let j=0; j<St.K; j++) ker[ch][i][j] = +((rnd()*2 - 1)).toFixed(2);
+    }
+  }
+  bias = +(((rnd()*2 - 1)*0.5)).toFixed(2);
+}
+
+const outDim = () => Math.floor((W - St.K + 2*St.pad)/St.stride) + 1;
+
+/* ---------- full output map for the active filter ---------- */
+let outMap = [], outMin = 0, outMax = 1, O = 1;
+function computeOut(){
+  O = outDim();
+  outMap = []; outMin = Infinity; outMax = -Infinity;
+  for(let or=0; or<O; or++){
+    outMap[or] = [];
+    for(let oc=0; oc<O; oc++){
+      let acc = bias;
+      for(let ch=0; ch<C; ch++){
+        for(let i=0; i<St.K; i++){
+          for(let j=0; j<St.K; j++){
+            const rr = or*St.stride - St.pad + i;
+            const cc = oc*St.stride - St.pad + j;
+            const v = (rr>=0 && rr<W && cc>=0 && cc<W) ? img[ch][rr][cc] : 0;
+            acc += v*ker[ch][i][j];
+          }
+        }
+      }
+      outMap[or][oc] = acc;
+      if(acc<outMin) outMin = acc;
+      if(acc>outMax) outMax = acc;
+    }
+  }
+  if(outMin===outMax){ outMin -= 1; outMax += 1; }
+  if(St.pos > O*O-1) St.pos = O*O-1;
+  if(St.pos < 0) St.pos = 0;
+}
+
+/* ---------- colours ---------- */
+function clip(v){ return Math.max(0, Math.min(1, v)); }
+function chColor(ch, v){
+  v = clip(v);
+  if(ch===0) return `rgb(${Math.round(35+215*v)},${Math.round(24+34*v)},${Math.round(28+30*v)})`;
+  if(ch===1) return `rgb(${Math.round(24+34*v)},${Math.round(40+200*v)},${Math.round(34+46*v)})`;
+  return `rgb(${Math.round(30+46*v)},${Math.round(44+70*v)},${Math.round(50+195*v)})`;
+}
+function outColor(v){ v = clip(v); return `rgb(${Math.round(20+30*v)},${Math.round(28+185*v)},${Math.round(36+96*v)})`; }
+function kerTint(w){ const a = Math.min(0.55, Math.abs(w)*0.6); return w>=0 ? `rgba(111,206,154,${a})` : `rgba(224,121,107,${a})`; }
+
+/* ---------- text helper ---------- */
+function txt(s, x, y, size, col, align, baseline){
+  X.fillStyle = col;
+  X.font = `${size}px 'JetBrains Mono', ui-monospace, monospace`;
+  X.textAlign = align || 'left';
+  X.textBaseline = baseline || 'alphabetic';
+  X.fillText(s, x, y);
+}
+
+/* ---------- current window / patch ---------- */
+function curRC(){ return { or: Math.floor(St.pos/O), oc: St.pos % O }; }
+
+/* ---------- offset stack (isometric-ish slabs) ---------- */
+function drawStack(x, y, size, n, colorFn, dx, dy){
+  for(let k=n-1; k>=0; k--){
+    const px = x + k*dx, py = y - k*dy;
+    X.fillStyle = colorFn(k, n);
+    X.strokeStyle = '#0e1011';
+    X.lineWidth = 1;
+    X.fillRect(px, py, size, size);
+    X.strokeRect(px+0.5, py+0.5, size, size);
+  }
+}
+
+/* ---------- horizontal flow arrow ---------- */
+function arrow(x, y, len){
+  X.strokeStyle = '#6b726a'; X.lineWidth = 2.5; X.fillStyle = '#6b726a';
+  X.beginPath(); X.moveTo(x, y); X.lineTo(x+len-9, y); X.stroke();
+  X.beginPath(); X.moveTo(x+len, y); X.lineTo(x+len-12, y-6.5); X.lineTo(x+len-12, y+6.5); X.closePath(); X.fill();
+}
+
+/* ---------- numeric K x K grid ---------- */
+function numGrid(ox, oy, cell, valFn, tintFn, fmt, padFn){
+  const K = St.K, fs = Math.min(cell*0.42, 12.5);
+  for(let i=0; i<K; i++){
+    for(let j=0; j<K; j++){
+      const x = ox + j*cell, y = oy + i*cell;
+      const padded = padFn ? padFn(i,j) : false;
+      X.fillStyle = padded ? '#141617' : (tintFn ? tintFn(i,j) : '#1a1c1e');
+      X.fillRect(x, y, cell, cell);
+      X.strokeStyle = padded ? '#3a3f42' : '#2b2f31';
+      X.lineWidth = 1;
+      if(padded){ X.setLineDash([3,2]); }
+      X.strokeRect(x+0.5, y+0.5, cell-1, cell-1);
+      X.setLineDash([]);
+      txt(fmt(valFn(i,j)), x+cell/2, y+cell/2, fs, padded ? '#5c635c' : '#dfe4de', 'center', 'middle');
+    }
+  }
+}
+
+/* ---------- MAIN DRAW ---------- */
+function scene(){
+  X.clearRect(0, 0, DW, DH);
+  const { or, oc } = curRC();
+
+  /* ===== TOP BAND — architecture reference (mirrors the handwritten sketch) ===== */
+  txt('input volume', 96, 42, 15, '#e8ece6', 'left', 'middle');
+  txt('32 filters', 482, 42, 15, '#e8ece6', 'left', 'middle');
+  txt('output volume', 852, 42, 15, '#e8ece6', 'left', 'middle');
+
+  const midY = 182;   // vertical centre-line for the flow arrows
+
+  // --- input volume: 3 tinted offset slabs (R / G / B) ---
+  const iX = 96, iY = 148, iS = 104, iD = 22;
+  drawStack(iX, iY, iS, 3, (k)=>chColor(2-k, 0.60), iD, iD);
+  txt('R', iX-28, iY-16, 14, '#e0796b', 'center', 'middle');
+  txt('G', iX-28, iY+20, 14, '#6fce9a', 'center', 'middle');
+  txt('B', iX-28, iY+56, 14, '#6fa8e0', 'center', 'middle');
+  txt('3 × 32 × 32', iX, iY+iS+22, 13, '#8a918a', 'left', 'top');
+
+  // --- arrow 1 ---
+  arrow(iX+2*iD+iS+18, midY, 80);
+
+  // --- filter block: one filter = 3 kernels + 1 bias ---
+  const kX = 366, kY = 150, kS = 60, kD = 15;
+  drawStack(kX, kY, kS, 3, ()=> '#23484a', kD, kD);
+  const tX = kX + 2*kD + kS + 26;
+  txt('1 filter = 3 kernels + 1 bias', tX, 150, 14.5, '#c3c9c1', 'left', 'middle');
+  txt(`kernel = ${St.K} × ${St.K} × 3`, tX, 178, 14, '#8a918a', 'left', 'middle');
+  txt(`× ${NF} filters`, tX, 206, 14, '#6fce9a', 'left', 'middle');
+  txt(`active: filter #${St.filter}`, tX, 234, 13.5, '#9ff0c1', 'left', 'middle');
+
+  // --- arrow 2 ---
+  arrow(776, midY, 62);
+
+  // --- output volume: stack of feature maps, active one highlighted ---
+  const oX = 856, oY = 150, oS = 104, oD = 12, oDy = 9, nShow = 9;
+  for(let k=nShow-1; k>=0; k--){
+    const px = oX + k*oD, py = oY - k*oDy;
+    const activeIdx = Math.round((nShow-1) * (St.filter-1)/(NF-1));
+    const isAct = (k===activeIdx);
+    X.fillStyle = isAct ? '#2f6b4c' : '#1f3a2c';
+    X.strokeStyle = isAct ? '#9ff0c1' : '#0e1011';
+    X.lineWidth = isAct ? 2 : 1;
+    X.fillRect(px, py, oS, oS);
+    X.strokeRect(px+0.5, py+0.5, oS, oS);
+  }
+  txt(`32 × ${O} × ${O}`, oX, oY+oS+22, 13, '#8a918a', 'left', 'top');
+  txt('feature maps', oX, oY+oS+40, 12, '#6b726a', 'left', 'top');
+
+  // divider
+  X.strokeStyle = '#2b2f31'; X.lineWidth = 1;
+  X.beginPath(); X.moveTo(24, 330); X.lineTo(DW-24, 330); X.stroke();
+
+  /* ===== step-by-step animation (everything below the divider) ===== */
+  X.save();
+  X.translate(0, 152);
+
+  /* ===== BOTTOM-LEFT — input channel heatmaps + sliding window ===== */
+  const hmS = 118, hmCell = hmS/W, colX = 40;
+  txt('input channels', colX, 200, 12, '#e8ece6', 'left', 'top');
+  const hmYs = [222, 222+hmS+40, 222+2*(hmS+40)];
+  for(let ch=0; ch<C; ch++){
+    const my = hmYs[ch];
+    // heatmap
+    for(let r=0; r<W; r++)
+      for(let cc=0; cc<W; cc++){
+        X.fillStyle = chColor(ch, img[ch][r][cc]);
+        X.fillRect(colX + cc*hmCell, my + r*hmCell, hmCell+0.6, hmCell+0.6);
+      }
+    X.strokeStyle = '#2b2f31'; X.lineWidth = 1; X.strokeRect(colX+0.5, my+0.5, hmS, hmS);
+    txt(CHN[ch], colX-14, my+hmS/2, 12, ch===0?'#e0796b':ch===1?'#6fce9a':'#6fa8e0', 'center', 'middle');
+    // sliding window (clipped to map)
+    X.save();
+    X.beginPath(); X.rect(colX, my, hmS, hmS); X.clip();
+    const wx = colX + (oc*St.stride - St.pad)*hmCell;
+    const wy = my + (or*St.stride - St.pad)*hmCell;
+    X.strokeStyle = '#9ff0c1'; X.lineWidth = 2;
+    X.strokeRect(wx, wy, St.K*hmCell, St.K*hmCell);
+    X.restore();
+  }
+  txt(`window @ (row ${or}, col ${oc})`, colX, hmYs[2]+hmS+8, 10.5, '#8a918a', 'left', 'top');
+
+  /* ===== BOTTOM-MIDDLE — per-channel multiply & sum ===== */
+  const K = St.K;
+  const cell = Math.min(38, 108/K), gw = K*cell;
+  const midX = 210;
+  const patchX = midX, kerX = midX + gw + 40, sumX = kerX + gw + 44;
+  const rowTop = 214, rowH = Math.max(gw, 40) + 20;
+  const partial = [0,0,0];
+
+  for(let ch=0; ch<C; ch++){
+    const ry = rowTop + ch*rowH;
+    const rowMid = ry + gw/2;
+    // channel tag
+    txt(CHN[ch], midX-16, rowMid, 12, ch===0?'#e0796b':ch===1?'#6fce9a':'#6fa8e0', 'center', 'middle');
+    // patch values (with padding flags)
+    numGrid(patchX, ry, cell,
+      (i,j)=>{ const rr=or*St.stride-St.pad+i, cc=oc*St.stride-St.pad+j;
+               return (rr>=0&&rr<W&&cc>=0&&cc<W)?img[ch][rr][cc]:0; },
+      (i,j)=>{ const rr=or*St.stride-St.pad+i, cc=oc*St.stride-St.pad+j;
+               const v=(rr>=0&&rr<W&&cc>=0&&cc<W)?img[ch][rr][cc]:0; return chColor(ch, v); },
+      (v)=>v.toFixed(2).slice(1),
+      (i,j)=>{ const rr=or*St.stride-St.pad+i, cc=oc*St.stride-St.pad+j;
+               return !(rr>=0&&rr<W&&cc>=0&&cc<W); });
+    // operator
+    txt('⊙', patchX+gw+20, rowMid, 16, '#8a918a', 'center', 'middle');
+    // kernel
+    numGrid(kerX, ry, cell, (i,j)=>ker[ch][i][j], (i,j)=>kerTint(ker[ch][i][j]),
+      (v)=>(v>=0?'+':'')+v.toFixed(2));
+    // compute partial sum
+    let ps = 0;
+    for(let i=0;i<K;i++) for(let j=0;j<K;j++){
+      const rr=or*St.stride-St.pad+i, cc=oc*St.stride-St.pad+j;
+      const v=(rr>=0&&rr<W&&cc>=0&&cc<W)?img[ch][rr][cc]:0;
+      ps += v*ker[ch][i][j];
+    }
+    partial[ch] = ps;
+    // '=' and sum box
+    txt('=', sumX-22, rowMid, 15, '#8a918a', 'center', 'middle');
+    X.fillStyle = '#1c1f21'; X.strokeStyle = '#2b2f31'; X.lineWidth = 1;
+    X.fillRect(sumX, rowMid-16, 72, 32); X.strokeRect(sumX+0.5, rowMid-15.5, 72, 32);
+    txt(ps.toFixed(2), sumX+36, rowMid, 13, '#dfe4de', 'center', 'middle');
+  }
+
+  // column captions
+  txt('patch', patchX+gw/2, rowTop-10, 11, '#8a918a', 'center', 'bottom');
+  txt('kernel', kerX+gw/2, rowTop-10, 11, '#8a918a', 'center', 'bottom');
+  txt('Σ (this channel)', sumX+36, rowTop-10, 11, '#8a918a', 'center', 'bottom');
+
+  // final combine line
+  const cy = rowTop + 3*rowH + 6;
+  const out = partial[0]+partial[1]+partial[2]+bias;
+  const combine = `ΣR ${partial[0].toFixed(2)}  +  ΣG ${partial[1].toFixed(2)}  +  ΣB ${partial[2].toFixed(2)}  +  bias ${(bias>=0?'+':'')}${bias.toFixed(2)}  =`;
+  txt(combine, midX-16, cy, 12, '#c3c9c1', 'left', 'middle');
+  const outBoxX = midX-16 + X.measureText(combine).width + 14;
+  X.fillStyle = '#2f6b4c'; X.strokeStyle = '#9ff0c1'; X.lineWidth = 1.6;
+  X.fillRect(outBoxX, cy-17, 78, 34); X.strokeRect(outBoxX+0.5, cy-16.5, 78, 34);
+  txt(out.toFixed(2), outBoxX+39, cy, 13.5, '#eafff2', 'center', 'middle');
+  txt('one output cell', outBoxX+39, cy+26, 10.5, '#8a918a', 'center', 'middle');
+
+  /* ===== BOTTOM-RIGHT — output feature map filling in ===== */
+  const omMax = 316;
+  const omCell = Math.min(omMax/O, 12);
+  const omS = omCell*O;
+  const omX = DW - 24 - omS, omY = 236;
+  txt(`output feature map — ${O} × ${O}`, omX, 200, 12, '#e8ece6', 'left', 'top');
+  txt(`filter ${St.filter} / 32`, omX, 216, 11, '#9ff0c1', 'left', 'top');
+  for(let r=0; r<O; r++){
+    for(let cc=0; cc<O; cc++){
+      const idx = r*O + cc;
+      const x = omX + cc*omCell, y = omY + r*omCell;
+      if(idx < St.pos){
+        const nv = (outMap[r][cc]-outMin)/(outMax-outMin);
+        X.fillStyle = outColor(nv);
+      } else if(idx === St.pos){
+        X.fillStyle = '#eafff2';
+      } else {
+        X.fillStyle = '#161a18';
+      }
+      X.fillRect(x, y, omCell+0.5, omCell+0.5);
+    }
+  }
+  X.strokeStyle = '#2b2f31'; X.lineWidth = 1; X.strokeRect(omX+0.5, omY+0.5, omS, omS);
+  // highlight current cell outline
+  X.strokeStyle = '#9ff0c1'; X.lineWidth = 2;
+  X.strokeRect(omX + oc*omCell, omY + or*omCell, omCell, omCell);
+  txt(`${St.pos+1} of ${O*O} positions computed`, omX, omY+omS+10, 10.5, '#8a918a', 'left', 'top');
+
+  X.restore();
+}
+
+/* ---------- render loop with DPR + letterbox-free aspect fit ---------- */
+function resize(){
+  const d = Math.max(1, window.devicePixelRatio||1);
+  CVS.width = CVS.clientWidth * d;
+  CVS.height = CVS.clientHeight * d;
+}
+addEventListener('resize', resize);
+
+let last = performance.now();
+function frame(now){
+  const dt = (now - last)/1000; last = now;
+  if(St.playing && O*O>1){
+    St._acc = (St._acc||0) + dt*St.cps;
+    while(St._acc >= 1){ St.pos = (St.pos+1) % (O*O); St._acc -= 1; }
+  }
+  const d = Math.max(1, window.devicePixelRatio||1);
+  X.setTransform(d,0,0,d,0,0);
+  const cw = CVS.clientWidth, ch = CVS.clientHeight;
+  const sc = Math.min(cw/DW, ch/DH);
+  X.clearRect(0,0,cw,ch);
+  X.save();
+  X.translate((cw-DW*sc)/2, (ch-DH*sc)/2);
+  X.scale(sc, sc);
+  scene();
+  X.restore();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- formula readout ---------- */
+function updateFormula(){
+  const o = outDim();
+  const wPer = St.K*St.K*C, wTot = NF*wPer, bTot = NF;
+  document.getElementById('formula').innerHTML =
+    `<b>output size</b> = ⌊ (W − K + 2P) / S ⌋ + 1 ` +
+    `= ⌊ (32 − <span class="cur">${St.K}</span> + 2·<span class="cur">${St.pad}</span>) / <span class="cur">${St.stride}</span> ⌋ + 1 ` +
+    `= <b>${o}</b> &nbsp;→&nbsp; output volume <b>32 × ${o} × ${o}</b><br>` +
+    `<b>per filter</b>: ${wPer} weights (K·K·C = ${St.K}·${St.K}·3) + 1 bias ` +
+    `&nbsp;·&nbsp; <b>total</b>: ${wTot.toLocaleString()} weights + ${bTot} biases = ${(wTot+bTot).toLocaleString()} learnable params`;
+}
+
+/* ---------- controls ---------- */
+function refresh(resetPos){
+  if(resetPos) St.pos = 0;
+  buildFilter(); computeOut(); updateFormula();
+}
+const g = id => document.getElementById(id);
+g('play').onclick = () => { St.playing = !St.playing; g('play').textContent = St.playing ? '⏸ pause' : '▶ play'; };
+g('step').onclick = () => { St.playing = false; g('play').textContent = '▶ play'; if(O*O>0) St.pos = (St.pos+1) % (O*O); };
+g('spd').oninput = e => { St.cps = +e.target.value; g('spdv').textContent = e.target.value; };
+g('flt').oninput = e => { St.filter = +e.target.value; g('fltv').textContent = e.target.value; refresh(false); };
+g('k').oninput = e => { St.K = +e.target.value; g('kv').textContent = e.target.value; refresh(true); };
+g('s').oninput = e => { St.stride = +e.target.value; g('sv').textContent = e.target.value; refresh(true); };
+g('p').oninput = e => { St.pad = +e.target.value; g('pv').textContent = e.target.value; refresh(true); };
+
+/* ---------- boot ---------- */
+resize();
+buildFilter();
+computeOut();
+updateFormula();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -42,6 +42,39 @@
             </g>
           </g>
         </svg>
+      {%- when 'conv' -%}
+        {%- comment -%}
+          Convolution: the input row across the top, a kernel window sliding over
+          three of its cells, and the single output cell that window feeds. The
+          taps under the window fan down into it, so the reduction reads as one
+          patch becoming one value.
+        {%- endcomment -%}
+        <svg width="180" height="80" viewBox="0 0 180 80" fill="none" aria-hidden="true">
+          <g stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round">
+            <g opacity=".45">
+              <rect x="10" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="34" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="58" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="82" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="106" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="130" y="10" width="20" height="20" rx="3"></rect>
+              <rect x="154" y="10" width="20" height="20" rx="3"></rect>
+            </g>
+            <rect x="55" y="7" width="50" height="26" rx="4"></rect>
+            <g stroke-width="1.2" opacity=".55">
+              <path d="M68 33 L86 48"></path>
+              <path d="M92 33 V48"></path>
+              <path d="M116 33 L98 48"></path>
+            </g>
+            <rect x="82" y="50" width="20" height="20" rx="3"></rect>
+            <g opacity=".3">
+              <rect x="34" y="50" width="20" height="20" rx="3"></rect>
+              <rect x="58" y="50" width="20" height="20" rx="3"></rect>
+              <rect x="106" y="50" width="20" height="20" rx="3"></rect>
+              <rect x="130" y="50" width="20" height="20" rx="3"></rect>
+            </g>
+          </g>
+        </svg>
       {%- endcase -%}
     </div>
     <div class="viz-body">
