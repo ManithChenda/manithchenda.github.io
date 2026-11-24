@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>viz · grad-cam 1d</title>
+<style>
+  :root{--bg:#16181a;--panel:#1c1f21;--fg:#c3c9c1;--dim:#8a918a;--muted:#6b726a;--accent:#6fce9a;--accent2:#9ff0c1;--neg:#e0876a;--border:#2b2f31;--head:#e8ece6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font-family:'JetBrains Mono',ui-monospace,monospace;
+       min-height:100vh;display:flex;flex-direction:column;
+       -webkit-font-smoothing:antialiased}
+  header{display:flex;justify-content:space-between;align-items:center;
+         padding:16px 24px;border-bottom:1px solid var(--border);font-size:13px}
+  header a{color:var(--accent);text-decoration:none}
+  header a:hover{text-decoration:underline;text-underline-offset:3px}
+  h1{font-size:14px;font-weight:700;margin:0;color:var(--head)}
+  main{flex:1;display:flex;flex-direction:column;gap:16px;padding:24px}
+  .wrap{width:100%;overflow-x:auto;background:#111314;border:1px solid var(--border);border-radius:8px}
+  .sizer{position:relative;margin:0 auto}
+  .stage{position:absolute;left:0;top:0;width:1200px;height:660px;transform-origin:0 0;overflow:hidden;color:var(--fg);font-size:14px}
+  .stage canvas{display:block;border-radius:3px}
+  .st-t{position:absolute;left:32px;top:22px;font-size:24px;font-weight:700;color:var(--head)}
+  .st-s{position:absolute;left:32px;top:58px;font-size:15px;color:var(--accent2)}
+  .body{position:absolute;left:24px;top:96px;width:1152px;height:548px;display:flex;align-items:center;justify-content:center}
+  .inner{display:flex;align-items:center;gap:28px}
+  .col{display:flex;flex-direction:column;align-items:center}
+  .cap{font-size:14px;margin-top:10px;text-align:center;color:var(--fg)}
+  .capS{font-size:12px;margin-top:4px;text-align:center;color:var(--muted)}
+  .arr{font-size:30px;line-height:1;color:var(--fg)}
+  .arr.g{color:var(--accent)}
+  .box{border:1.5px solid var(--fg);border-radius:4px;padding:12px 14px;font-size:14px;text-align:center;line-height:1.4}
+  .gl{position:absolute;font-size:13px;line-height:1.45;color:var(--dim)}
+  .gl b{color:var(--accent2);font-weight:700}
+  .big{position:absolute;font-size:20px;font-weight:700;color:var(--head)}
+  .rl{display:flex;flex-direction:column;justify-content:space-around;text-align:right;font-size:12px;color:var(--dim)}
+  .ctl{display:flex;gap:14px 28px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--dim)}
+  .ctl label{display:flex;gap:8px;align-items:center;cursor:pointer}
+  .ctl .grp{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .ctl .grp>span{color:var(--muted)}
+  input[type=range],input[type=radio],input[type=checkbox]{accent-color:var(--accent)}
+  input[type=range]{width:180px}
+  button{font:inherit;font-size:12px;color:var(--fg);background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent2)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .logits{font-variant-numeric:tabular-nums;color:var(--muted)}
+  .logits b{color:var(--head)}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-size:12.5px;line-height:1.7;max-width:90ch}
+  .step p{margin:0}
+  .note{font-size:11.5px;color:var(--dim);max-width:70ch;line-height:1.7;margin:0}
+</style>
+</head>
+<body>
+<header><h1>grad_cam_1d.js</h1><a href="./">cd ../viz</a></header>
+<main>
+  <div class="wrap" id="wrap"><div class="sizer" id="sizer"><div class="stage" id="stage" role="img" aria-label="Grad-CAM on a 1D waveform CNN, current step"></div></div></div>
+  <p class="note" id="hint" hidden style="margin-top:-8px">the diagram is wider than this screen: scroll it sideways, or turn the phone</p>
+  <div class="ctl">
+    <div class="grp"><button id="prev" type="button">&larr; prev</button>
+      <label>step <input id="st" type="range" min="0" max="8" step="1" value="0"></label><span id="stn">0 / 8</span>
+      <button id="next" type="button">next &rarr;</button>
+      <button id="play" type="button" hidden>pause animation</button></div>
+    <div class="grp" id="cls" role="radiogroup" aria-label="class to explain"><span>explain</span></div>
+    <div class="grp" id="evs"><span>events</span></div>
+    <div class="logits" id="lg"></div>
+  </div>
+  <div class="step" aria-live="polite"><p id="sp"></p></div>
+  <p class="note">Grad-CAM on a small 1D convolutional network that reads raw audio. A 1024-sample waveform holds a click, a tone and a rising chirp. Two strided conv layers turn it into 6 channels over 64 time steps; Grad-CAM then backpropagates the chosen class logit to those channels, averages each gradient row over time into a weight, sums the weighted channels, keeps the positive part and interpolates it back onto the samples. Because the last conv layer has only a time axis, the map says <em>when</em> the evidence occurs, at 16-sample resolution. Step through with the buttons or arrow keys, switch the class to see the highlight move, or remove an event to watch the map latch onto whatever weakly resembles it. On the conv step, move the pointer over the diagram to follow one time step's receptive field; steps 1 to 7 loop an animation of their operation, which the pause button stops. Filters are hand-set band-pass, sweep and onset detectors, not trained weights; every number is computed live.</p>
+</main>
+<script>
+(function(){
+const N=1024,T=64,HOP=16,K=6;
+let sd=11;const rnd=()=>(sd=sd*16807%2147483647)/2147483647;
+const gn=()=>{let s=0;for(let i=0;i<6;i++)s+=rnd();return (s-3)/Math.sqrt(.5)};
+const NOISE=Array.from({length:N},()=>gn()*.02);
+const CLICKN=Array.from({length:48},()=>gn());
+const EV=[{n:'Click',a:120,b:168},{n:'Tone',a:260,b:560},{n:'Chirp',a:640,b:960}];
+const taper=(m,L,r=24)=>m<r?.5-.5*Math.cos(Math.PI*m/r):m>L-r?.5-.5*Math.cos(Math.PI*(L-m)/r):1;
+function wave(ev){const x=NOISE.slice();
+ if(ev[0])for(let m=0;m<48;m++)x[120+m]+=.85*Math.exp(-m/7)*CLICKN[m];
+ if(ev[1]){const L=300;for(let m=0;m<=L;m++)x[260+m]+=.55*taper(m,L)*Math.sin(2*Math.PI*.08*m)}
+ if(ev[2]){const L=320,f0=.02,f1=.22;for(let m=0;m<=L;m++)x[640+m]+=.55*taper(m,L)*Math.sin(2*Math.PI*(f0*m+(f1-f0)*m*m/(2*L)))}
+ return x}
+const gab=f=>{const g=[];for(let m=-24;m<=24;m++)g.push(Math.exp(-m*m/128)*Math.cos(2*Math.PI*f*m));let re=0,im=0;g.forEach((v,i)=>{re+=v*Math.cos(2*Math.PI*f*(i-24));im+=v*Math.sin(2*Math.PI*f*(i-24))});const G=Math.hypot(re,im);return g.map(v=>v/G)};
+const K1=[gab(.03),gab(.08),gab(.18),[-.25,.5,-.25]];
+const conv1=(x,k)=>{const h=(k.length-1)/2,o=new Float32Array(T);for(let t=0;t<T;t++){let s=0;for(let n=t*HOP;n<t*HOP+HOP;n++){let r=0;for(let j=0;j<k.length;j++){const q=n-j+h;if(q>=0&&q<N)r+=k[j]*x[q]}s+=Math.max(0,r)}o[t]=s/HOP}return o};
+const L2=[
+ {w:[[0,0,1]],b:.08},
+ {w:[[1,0,1]],b:.08},
+ {w:[[2,0,1]],b:.08},
+ {w:[[1,-3,1/7],[1,-2,1/7],[1,-1,1/7],[1,0,1/7],[1,1,1/7],[1,2,1/7],[1,3,1/7],[3,0,-.5]],b:.45},
+ {w:[[0,-6,.2],[0,-5,.3],[0,-4,.2],[1,0,.3],[2,4,.2],[2,5,.3],[2,6,.2],[2,-5,-.6],[0,5,-.6],[3,0,-.3],[1,-5,-.3],[1,5,-.3]],b:.25},
+ {w:[[3,0,1],[3,-2,-.5],[3,2,-.5],[1,0,-.3]],b:.15}];
+const lay2=a=>L2.map(({w,b})=>{const o=new Float32Array(T);for(let t=0;t<T;t++){let s=-b;w.forEach(([c,d,v])=>{const q=t+d;if(q>=0&&q<T)s+=v*a[c][q]});o[t]=Math.max(0,s)}return o});
+const raw=x=>{const a=K1.map(k=>conv1(x,k));return a};
+const r1=raw(wave([1,1,1])).map(a=>Math.max(...a)||1);
+const feat=x=>{const a=raw(x).map((v,c)=>v.map(u=>u/r1[c]));return lay2(a)};
+const r2=feat(wave([1,1,1])).map(a=>Math.max(...a)||1);
+const MAPS=['low band','mid band','high band','sustained','rising sweep','transient'];
+const CLS=['Click','Tone','Chirp'];
+const GW=8;
+const W=[[-.3,-.5,0,-.5,-.6,9],[-.5,.5,-.5,1.5,-1,-.5],[.3,-.4,.3,-.8,8,-.6]].map(r=>r.map(v=>v*GW));
+const sum=a=>a.reduce((p,v)=>p+v,0);
+function compute(cls,ev=[1,1,1]){
+ const x=wave(ev);const A1=raw(x).map((v,c)=>v.map(u=>u/r1[c]));const A=lay2(A1).map((a,k)=>a.map(v=>v/r2[k]));
+ const s=A.map(a=>sum(a.map(v=>v*v))/T);
+ const y=W.map(w=>sum(w.map((wk,k)=>wk*s[k])));
+ const grad=A.map((a,k)=>a.map(v=>2*W[cls][k]*v/T));
+ const al=grad.map(g=>sum(g)/T);
+ const wA=A.map((a,k)=>a.map(v=>al[k]*v));
+ const S=new Float32Array(T);wA.forEach(m=>m.forEach((v,i)=>S[i]+=v));
+ const L=S.map(v=>Math.max(0,v));const Lm=Math.max(...L);
+ const up=new Float32Array(N);
+ for(let n=0;n<N;n++){const f=Math.min(T-1,Math.max(0,(n+.5)/HOP-.5)),t0=Math.floor(f),t1=Math.min(T-1,t0+1),u=f-t0;up[n]=Lm>0?(L[t0]*(1-u)+L[t1]*u)/Lm:0}
+ return{x,A1,A,s,y,grad,al,wA,S,L,Lm,up}}
+
+const $=id=>document.getElementById(id);
+const P={panel:[28,31,33],fg:[195,201,193],acc:[111,206,154],acc2:[159,240,193],neg:[224,135,106]};
+const MONO="'JetBrains Mono', ui-monospace, monospace";
+const rgb=(c,a)=>`rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a==null?1:a})`;
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const cl=t=>Math.max(0,Math.min(1,t));
+const seqC=t=>mix(P.panel,P.fg,cl(t));
+const divC=t=>{t=Math.max(-1,Math.min(1,t));const g=Math.pow(Math.abs(t),.55);return t<0?mix(P.panel,P.neg,g):mix(P.panel,P.acc,g)};
+const f3=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(3);
+const DW=1200,DH=660,KS=Math.max(2,devicePixelRatio*1.25);
+const L1N=['low band','mid band','high band','high-pass'];
+const S={step:0,cls:2,ev:[1,1,1],t:30,play:!matchMedia('(prefers-reduced-motion: reduce)').matches};
+let R=null,timer=null,setT=null;
+const stage=$('stage');
+const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e};
+const at=(e,x,y,w,h)=>{e.style.position='absolute';e.style.left=x+'px';e.style.top=y+'px';if(w!=null)e.style.width=w+'px';if(h!=null)e.style.height=h+'px';stage.appendChild(e);return e};
+function cnv(w,h){const c=document.createElement('canvas');c.width=Math.round(w*KS);c.height=Math.round(h*KS);c.style.width=w+'px';c.style.height=h+'px';const g=c.getContext('2d');g.scale(KS,KS);return [c,g]}
+function drawWav(g,x,w,h,o){o=o||{};g.fillStyle=rgb(P.panel);g.fillRect(0,0,w,h);const rv=o.reveal==null?1:o.reveal;
+ if(o.heat)for(let p=0;p<w*rv;p++){const hh=o.heat[Math.min(N-1,Math.floor(p/w*N))]*(o.amp==null?1:o.amp);if(hh>.01){g.fillStyle=rgb(P.acc,.5*Math.pow(hh,.9));g.fillRect(p,0,1.3,h)}}
+ const yc=h/2,sc=h*.44/.9;g.fillStyle=rgb(P.fg,.15);g.fillRect(0,yc,w,.7);g.lineWidth=1;g.lineJoin='round';
+ for(let n=1;n<N;n++){const hh=o.heat&&n/N<=rv?o.heat[n]*(o.amp==null?1:o.amp):0;g.strokeStyle=hh?rgb(mix(P.fg,P.acc2,hh)):rgb(P.fg);g.beginPath();g.moveTo((n-1)/N*w,yc-x[n-1]*sc);g.lineTo(n/N*w,yc-x[n]*sc);g.stroke()}
+ if(o.labels){g.font=`11px ${MONO}`;g.fillStyle='#8a918a';g.textAlign='center';g.textBaseline='top';EV.forEach((e,i)=>{if(S.ev[i])g.fillText(e.n.toLowerCase(),(e.a+e.b)/2/N*w,4)})}}
+function wav(x,w,h,o){const [c,g]=cnv(w,h);drawWav(g,x,w,h,o);c._g=g;return c}
+function fmap(rows,cf,w,h){const [c,g]=cnv(w,h);const cw=w/rows[0].length,ch=h/rows.length;rows.forEach((r,k)=>r.forEach((v,t)=>{g.fillStyle=rgb(cf(v));g.fillRect(t*cw,k*ch,cw+.6,ch+.6)}));g.strokeStyle='rgba(17,19,20,.9)';g.lineWidth=1;for(let k=1;k<rows.length;k++){g.beginPath();g.moveTo(0,k*ch);g.lineTo(w,k*ch);g.stroke()}return c}
+function drawBars(g,v,w,h,m,signed){g.fillStyle=rgb(P.panel);g.fillRect(0,0,w,h);const bw=w/v.length,z=signed?h/2:h-1;
+ v.forEach((u,t)=>{const l=Math.min(Math.abs(u)/m,1)*(signed?h/2-4:h-6);g.fillStyle=rgb(u<0?P.neg:P.acc);g.fillRect(t*bw+bw*.15,u<0?z:z-l,bw*.7,l)});g.fillStyle=rgb(P.fg,.5);g.fillRect(0,z,w,1)}
+function bars(v,w,h,m,signed){const [c,g]=cnv(w,h);drawBars(g,v,w,h,m,signed);c._g=g;return c}
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let RAFS=[];
+const ease=p=>p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+let loopT=null;const STILL=()=>RM||!S.play;
+function stopAnims(){RAFS.forEach(o=>cancelAnimationFrame(o.v));RAFS=[];clearTimeout(loopT);loopT=null}
+function tween(delay,dur,fn,lin){if(STILL()){fn(1);return}fn(0);const t0=performance.now()+delay,o={v:0};const tick=now=>{const p=Math.max(0,Math.min(1,(now-t0)/dur));fn(lin?p:ease(p));if(p<1)o.v=requestAnimationFrame(tick)};o.v=requestAnimationFrame(tick);RAFS.push(o)}
+function layered(node){const w=el('div');w.style.cssText='position:relative;display:block';w.append(node);const l=el('div');l.style.cssText='position:absolute;inset:0;pointer-events:none;overflow:hidden';w.append(l);return [w,l]}
+function scanLine(layer){const d=el('div');d.style.cssText='position:absolute;top:-2px;bottom:-2px;width:2px;background:#9ff0c1;box-shadow:0 0 8px #6fce9a;left:0;opacity:0';layer.append(d);return d}
+const lab=(node,names,lw)=>{const d=el('div');d.style.cssText='display:flex;gap:10px;align-items:stretch';const r=el('div','rl',names.map(n=>`<div>${n}</div>`).join(''));r.style.width=(lw||96)+'px';d.append(r,node);return d};
+const col=(n,cap,sm)=>{const d=el('div','col');d.append(n);if(cap)d.append(el('div','cap',cap));if(sm)d.append(el('div','capS',sm));return d};
+const arr=(g,t,rot)=>{const d=el('div','col');const a=el('div','arr'+(g?' g':''),'→');if(rot)a.style.transform='rotate(90deg)';d.append(a);if(t)d.append(el('div','capS',t));return d};
+const row=(items,gap)=>{const d=el('div');d.style.cssText=`display:flex;align-items:center;gap:${gap==null?24:gap}px`;items.forEach(i=>d.append(i));return d};
+const vcol=(items,gap)=>{const d=el('div','col');d.style.gap=(gap==null?18:gap)+'px';items.forEach(i=>d.append(i));return d};
+const alphaBars=(w,h)=>{const d=el('div');d.style.cssText=`width:${w}px;height:${h}px;position:relative;background:rgb(28,31,33);border-radius:3px`;const m=Math.max(...R.al.map(Math.abs))||1;
+ d.append(Object.assign(el('div'),{style:`position:absolute;left:50%;top:0;bottom:0;border-left:1px solid #c3c9c1`}));
+ R.al.forEach((v,k)=>{const bw=Math.abs(v)/m*(w/2-6);d.append(Object.assign(el('div'),{style:`position:absolute;top:${(k+.2)*h/6}px;height:${h/6*.6}px;width:${bw}px;left:${v<0?w/2-bw:w/2}px;background:${v<0?'#e0876a':'#6fce9a'}`}))});return d};
+function body(){const b=el('div','body'),i=el('div','inner');b.append(i);stage.append(b);return i}
+function fit(i){const p=i.parentElement,z=Math.min(1,(p.clientWidth-8)/i.scrollWidth,(p.clientHeight-8)/i.scrollHeight);i.style.zoom=z}
+function svg(){const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('width',DW);s.setAttribute('height',DH);s.style.cssText='position:absolute;left:0;top:0;pointer-events:none';stage.append(s);return s}
+const mx=a=>Math.max(...a.map(r=>Math.max(...r.map(Math.abs))))||1;
+
+const STEPS=[
+ ['Grad-CAM on a 1D waveform CNN','Lᶜ = ReLU( Σₖ αₖᶜ Aᵏ ),   αₖᶜ = (1/T) Σₜ ∂yᶜ/∂Aᵏₜ'],
+ ['1 · forward: conv layers trade time for channels','1 × 1024  →  4 × 64  →  6 × 64'],
+ ['2 · forward: pool and score','yᶜ = Σₖ wₖᶜ sₖ ,   sₖ = (1/T) Σₜ (Aᵏₜ)²'],
+ ['3 · gradients of the class logit','∂yᶜ / ∂Aᵏₜ   for every channel k and time step t'],
+ ['4 · average over time into weights','αₖᶜ = (1/T) Σₜ ∂yᶜ / ∂Aᵏₜ'],
+ ['5 · weighted sum of the channels','Sᶜₜ = Σₖ αₖᶜ Aᵏₜ'],
+ ['6 · ReLU keeps positive evidence','Lᶜ = max(0, Sᶜ)'],
+ ['7 · upsample to samples and overlay','interpolate 64 steps back to 1024 samples, normalise to [0, 1], shade the waveform'],
+ ['8 · same waveform, three explanations','Grad-CAM is class-specific: change c and the highlighted span moves']];
+
+function s0(){const i=body();i.style.flexDirection='column';i.style.gap='34px';
+ const aM=mx(R.A),gM=mx(R.grad),sM=Math.max(...R.S.map(Math.abs))||1;
+ i.append(row([col(wav(R.x,300,110,{labels:1}),'input x'),arr(),col(fmap(R.A,v=>seqC(v/aM),260,110),'Aᵏ  6 × 64'),arr(1),col(fmap(R.grad,v=>divC(v/gM),260,110),'∂yᶜ/∂Aᵏ')],22),
+  row([col(alphaBars(120,110),'αₖ'),arr(),col(bars(R.S,220,110,sM,1),'Σ αₖAᵏ'),arr(),col(bars(R.L,220,110,sM,1),'ReLU'),arr(),col(wav(R.x,300,110,{heat:R.up}),'upsample, overlay')],22));fit(i)}
+
+function s1(){const X0=232,X1=1028,TW=X1-X0,yW=104,hW=96,y1=292,h1=104,y2=466,h2=156;
+ at(el('div','gl','<b>input x</b><br>raw samples'),32,yW+28,190);
+ at(wav(R.x,TW,hW,{labels:1}),X0,yW);
+ at(el('div','gl','<b>conv1d</b> 4 filters<br>49 taps, ReLU<br>avg-pool ÷ 16'),32,yW+hW+12,190);
+ K1.forEach((k,j)=>{const [c,g]=cnv(40,24);g.strokeStyle=rgb(P.acc2);g.lineWidth=1.2;g.beginPath();const m=Math.max(...k.map(Math.abs));k.forEach((v,q)=>{const xx=q/(k.length-1)*40,yy=12-v/m*10;q?g.lineTo(xx,yy):g.moveTo(xx,yy)});g.stroke();at(c,32+j*46,yW+hW+70)});
+ at(lab(fmap(R.A1,v=>seqC(v),TW,h1),L1N,96),X0-106,y1);
+ at(el('div','gl','<b>conv1d</b> 6 filters<br>4 ch × 13 steps<br>ReLU'),32,y1+h1+10,190);
+ at(lab(fmap(R.A,v=>seqC(v),TW,h2),MAPS,96),X0-106,y2);
+ at(el('div','big','1 × 1024'),1046,yW+34);at(el('div','gl','time ÷ 16<br>channels 1 → 4'),1046,yW+hW+22,140);
+ at(el('div','big','4 × 64'),1046,y1+38);at(el('div','gl','time kept<br>channels 4 → 6'),1046,y1+h1+20,140);
+ at(el('div','big','6 × 64'),1046,y2+52);at(el('div','gl','= Aᵏ, the layer<br>Grad-CAM reads'),1046,y2+84,140);
+ const cap=at(el('div','gl',''),X0,y2+h2+6,TW);const ov=svg();
+ const xs=n=>X0+n/N*TW,xt=t=>X0+t/T*TW;
+ setT=t=>{S.t=t;const a=Math.max(0,t-6),b=Math.min(T-1,t+6),n0=Math.max(0,a*HOP-24),n1=Math.min(N,(b+1)*HOP+24);
+  ov.innerHTML=`<polygon points="${xt(t)},${y2} ${xt(t+1)},${y2} ${xt(b+1)},${y1+h1} ${xt(a)},${y1+h1}" fill="rgba(111,206,154,.13)" stroke="rgba(111,206,154,.55)"/>
+  <polygon points="${xt(a)},${y1} ${xt(b+1)},${y1} ${xs(n1)},${yW+hW} ${xs(n0)},${yW+hW}" fill="rgba(111,206,154,.13)" stroke="rgba(111,206,154,.55)"/>
+  <rect x="${xs(n0)}" y="${yW}" width="${xs(n1)-xs(n0)}" height="${hW}" fill="rgba(111,206,154,.16)" stroke="#6fce9a"/>
+  <rect x="${xt(a)}" y="${y1}" width="${xt(b+1)-xt(a)}" height="${h1}" fill="none" stroke="#6fce9a" stroke-dasharray="4 3"/>
+  <rect x="${xt(t)}" y="${y2}" width="${TW/T}" height="${h2}" fill="none" stroke="#9ff0c1" stroke-width="2"/>`;
+  cap.innerHTML=`time step <b>t = ${t}</b> of 64 sees samples ${n0}–${n1-1} (${n1-n0} samples) through both layers`};
+ setT(S.t)}
+
+function s2(){const i=body();const aM=mx(R.A);const sM=Math.max(...R.s)||1,yM=Math.max(...R.y.map(Math.abs))||1;
+ const sk=el('div');sk.style.cssText='display:grid;grid-template-columns:auto 150px auto;gap:6px 10px;align-items:center;font-size:12px';const sb=[],sv=[];
+ R.s.forEach((v,k)=>{sk.insertAdjacentHTML('beforeend',`<div style="text-align:right;color:#8a918a">${MAPS[k]}</div><div style="height:14px;background:#1c1f21"><div style="height:100%;width:0;background:#c3c9c1"></div></div><div style="font-variant-numeric:tabular-nums">0.000</div>`);sb.push(sk.children[sk.children.length-2].firstChild);sv.push(sk.lastChild)});
+ const lg=el('div');lg.style.cssText='display:flex;flex-direction:column;gap:12px;width:200px;font-size:14px';const lb=[],lv=[];
+ CLS.forEach((n,k)=>{const on=k===S.cls;lg.insertAdjacentHTML('beforeend',`<div style="${on?'color:#e8ece6;font-weight:700':''}">${n.toLowerCase()}<span style="float:right;font-variant-numeric:tabular-nums">0.00</span><div style="height:12px;background:#1c1f21;margin-top:4px;position:relative"><div style="position:absolute;left:0;height:100%;width:0;background:${on?'#6fce9a':'#6b726a'}"></div></div></div>`);const r=lg.lastChild;lv.push(r.querySelector('span'));lb.push(r.lastChild.firstChild)});
+ const [w,l]=layered(fmap(R.A,v=>seqC(v/aM),300,156)),sc=scanLine(l);
+ i.append(col(lab(w,MAPS,96),'Aᵏ  6 × 64'),arr(0,'mean of<br>squares'),col(sk,'sₖ  6 numbers'),arr(0,'linear<br>W  3 × 6'),col(lg,'logits yᶜ'));fit(i);
+ const cum=R.A.map(a=>{let z=0;return Array.from(a).map(v=>(z+=v*v)/T)});
+ return()=>{tween(200,1400,p=>{sc.style.left=(p*100)+'%';sc.style.opacity=p>0&&p<1?1:0;const t=Math.floor(p*T)-1;R.s.forEach((v,k)=>{const q=p>=1?v:t<0?0:cum[k][t];sb[k].style.width=(q/sM*100)+'%';sv[k].textContent=q.toFixed(3)})},1);
+ R.y.forEach((v,k)=>tween(1800+k*220,700,p=>{lb[k].style.width=(Math.max(0,v)*p/yM*100)+'%';lv[k].textContent=(v*p).toFixed(2)}));return 2940}}
+
+function s3(){const i=body();const aM=mx(R.A),gM=mx(R.grad);
+ const lgd=el('div','',`<div style="display:flex;flex-direction:column;gap:10px;font-size:13px"><div><span style="display:inline-block;width:28px;height:12px;background:#6fce9a;margin-right:8px;vertical-align:middle"></span>raises yᶜ</div><div><span style="display:inline-block;width:28px;height:12px;background:#e0876a;margin-right:8px;vertical-align:middle"></span>lowers yᶜ</div></div>`);
+ const [w,l]=layered(fmap(R.grad,v=>divC(v/gM),780,150));const mk=el('div');mk.style.cssText='position:absolute;left:0;top:0;bottom:0;width:100%;background:#1c1f21;border-right:2px solid #9ff0c1;box-shadow:4px 0 10px rgba(111,206,154,.5)';l.append(mk);
+ const cap=el('span','',`<span style="color:#9ff0c1">gradients ∂y<sup>${CLS[S.cls].toLowerCase()}</sup>/∂Aᵏ</span> <span id="bp" style="color:#6b726a">← backward pass</span>`);
+ i.append(vcol([col(lab(fmap(R.A,v=>seqC(v/aM),780,150),MAPS),'feature maps Aᵏ'),col(lab(w,MAPS),cap.innerHTML)],20),lgd);fit(i);
+ return()=>{tween(300,1500,p=>{mk.style.width=((1-p)*100)+'%';mk.style.borderRightWidth=p<1?'2px':'0';mk.style.boxShadow=p<1?'4px 0 10px rgba(111,206,154,.5)':'none'});return 1800}}
+
+function s4(){const i=body();const gM=mx(R.grad);const g=el('div');g.style.cssText='display:grid;grid-template-columns:auto 640px auto auto;gap:12px 18px;align-items:center';const sc=[],av=[];
+ R.grad.forEach((gr,k)=>{const [w,l]=layered(fmap([gr],v=>divC(v/gM),640,36));sc.push(scanLine(l));const a=el('span');a.style.cssText=`display:inline-block;min-width:4.2em;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:${R.al[k]<0?'#e0876a':'#6fce9a'}`;a.textContent=f3(0);av.push(a);
+  g.append(el('div','',`<div style="text-align:right;color:#8a918a;font-size:13px">${MAPS[k]}</div>`),w,el('div','',`<span style="color:#6b726a;font-size:12px">mean over t →</span>`),a)});
+ i.append(g);fit(i);
+ return()=>{R.grad.forEach((gr,k)=>{const cs=[];let a=0;gr.forEach(v=>{a+=v;cs.push(a/T)});tween(200+k*380,1100,p=>{sc[k].style.left=(p*100)+'%';sc[k].style.opacity=p>0&&p<1?1:0;const t=Math.min(T-1,Math.floor(p*T));av[k].textContent=f3(p>=1?R.al[k]:p>0?cs[t]:0)},1)});return 3200}}
+
+function s5(){const i=body();const aM=mx(R.A),sM=Math.max(...R.S.map(Math.abs))||1;const g=el('div');g.style.cssText='display:grid;grid-template-columns:auto auto 680px;gap:8px 12px;align-items:center';const rows=[];
+ R.A.forEach((a,k)=>{const r=[el('div','',`<span style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:${R.al[k]<0?'#e0876a':'#6fce9a'}">${k?'+ ':''}${f3(R.al[k])}</span>`),el('div','','×'),fmap([a],v=>seqC(v/aM),680,30)];r.forEach(e=>g.append(e));rows.push(r)});
+ const sc=bars(R.S,680,130,sM,1),eq=el('div','',`<span style="font-size:26px">=</span>`),sc2=col(sc,'Sᶜ  signed, 64 steps');g.append(eq,el('div'),sc2);
+ const cnt=el('div','capS','');cnt.style.textAlign='left';g.append(el('div'),el('div'),cnt);
+ i.append(g);fit(i);
+ return()=>{const n=R.A.length;
+  tween(0,1,p=>{rows.forEach(r=>r.forEach(e=>e.style.opacity=p>=1&&STILL()?1:.22));eq.style.opacity=sc2.style.opacity=STILL()?1:0;cnt.textContent=STILL()?'all 6 weighted channels summed':''});
+  rows.forEach((r,k)=>tween(300+k*450,300,p=>{r.forEach(e=>e.style.opacity=.22+.78*p);if(p>0)cnt.textContent=`weighting channel ${k+1} of ${n}`}));
+  const t0=300+n*450+200;
+  tween(t0,700,p=>{eq.style.opacity=sc2.style.opacity=Math.min(1,p*2);drawBars(sc._g,Array.from(R.S).map(v=>v*p),680,130,sM,1);if(p>0)cnt.textContent='all 6 weighted channels summed'});
+  return t0+700}}
+
+function s6(){const sM=Math.max(...R.S.map(Math.abs))||1,n=R.S.filter(v=>v<0).length,c=CLS[S.cls].toLowerCase();
+ const BX=96,AX=704,Y=200,W=400,H=220;
+ const before=at(bars(R.S,W,H,sM,1),BX,Y);const after=at(bars(R.L,W,H,sM,1),AX,Y);
+ const relu=at(el('div','',`<svg width="150" height="120" viewBox="0 0 260 200"><line x1="10" y1="150" x2="250" y2="150" stroke="#6b726a" stroke-width="3"/><line x1="130" y1="10" x2="130" y2="190" stroke="#6b726a" stroke-width="3"/><polyline points="10,150 130,150 240,40" fill="none" stroke="#9ff0c1" stroke-width="8"/></svg>`),525,Y+50,150);
+ at(el('div','cap','ReLU'),525,Y+172,150);
+ at(el('div','cap','before'),BX,Y+H+4,W);at(el('div','capS',`coral = evidence against ${c}`),BX,Y+H+28,W);
+ at(el('div','cap','after'),AX,Y+H+4,W);const sub=at(el('div','capS',`${n} of 64 steps set to zero`),AX,Y+H+28,W);
+ const fl=at(bars(R.S,W,H,sM,1),BX,Y);relu.style.zIndex=2;relu.style.background='radial-gradient(closest-side,rgba(17,19,20,.85),rgba(17,19,20,0))';fl.style.boxShadow='0 0 0 1px #6fce9a, 0 8px 24px rgba(0,0,0,.5)';fl.style.opacity=0;
+ return()=>{tween(400,2000,p=>{const still=STILL();
+  if(still||p>=1){fl.style.opacity=0;drawBars(after._g,R.L,W,H,sM,1);sub.style.opacity=1;relu.style.filter='none';return}
+  drawBars(after._g,new Array(T).fill(0),W,H,sM,1);sub.style.opacity=.2;
+  fl.style.opacity=1;fl.style.left=(BX+p*(AX-BX))+'px';
+  const k=1-Math.max(0,Math.min(1,(p-.38)/.24));drawBars(fl._g,Array.from(R.S).map(v=>v<0?v*k:v),W,H,sM,1);
+  relu.style.filter=p>.3&&p<.7?'drop-shadow(0 0 8px #6fce9a)':'none'});return 2600}}
+
+function s7(){const i=body();i.style.flexDirection='column';i.style.gap='8px';
+ if(!(R.Lm>0)){i.append(el('div','gl','Every step is zero after the ReLU, so there is nothing to upsample: no part of this input supports the class.'));return}
+ const W=860,[c,g]=cnv(W,104);
+ const curve=p=>{g.fillStyle=rgb(P.panel);g.fillRect(0,0,W,104);const xe=W;
+  g.beginPath();g.moveTo(0,103);for(let x=0;x<xe;x++){const n=Math.floor(x/W*N);g.lineTo(x,103-R.up[n]*94*p)}g.lineTo(xe-1,103);g.closePath();g.fillStyle=rgb(P.acc,.3);g.fill();
+  g.beginPath();for(let x=0;x<xe;x++){const n=Math.floor(x/W*N),y=103-R.up[n]*94*p;x?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle=rgb(P.acc);g.lineWidth=2;g.stroke()};
+ curve(1);
+ const dn=t=>{const d=el('div');d.style.cssText='display:flex;align-items:center;gap:12px;margin:4px 0';const a=el('div','arr','→');a.style.transform='rotate(90deg)';d.append(a,el('div','capS',t));d.lastChild.style.marginTop='0';return d};
+ const lb=bars(R.L,W,104,R.Lm,0),ov=wav(R.x,W,130,{heat:R.up,labels:1});
+ const p1=col(lb,`L<sup>${CLS[S.cls].toLowerCase()}</sup>, 64 time steps`),a1=dn('linear interpolation'),p2=col(c,'upsampled to 1024 samples, ÷ max'),a2=dn('overlay on the input'),p3=col(ov,'Grad-CAM on the waveform');
+ i.append(p1,a1,p2,a2,p3);fit(i);
+ const op=(e,v)=>e.style.opacity=v;
+ return()=>{
+  tween(0,1,()=>{if(!STILL()){[a1,p2,a2,p3].forEach(e=>op(e,0));op(p1,1)}});
+  tween(200,800,p=>drawBars(lb._g,Array.from(R.L).map(v=>v*p),W,104,R.Lm,0));
+  tween(1100,300,p=>op(a1,p));
+  tween(1400,800,p=>{op(p2,p>0?1:0);curve(p)});
+  tween(2500,300,p=>op(a2,p));
+  tween(2800,800,p=>{op(p3,p>0?1:0);drawWav(ov._g,R.x,W,130,{heat:R.up,labels:1,amp:p})});
+  return 3600}}
+
+function s8(){const i=body();i.style.flexDirection='column';i.style.gap='26px';
+ [2,1,0].forEach(k=>{const q=compute(k,S.ev);i.append(row([el('div','',`<div style="width:90px;text-align:right;font-size:16px;font-weight:700;color:${k===S.cls?'#9ff0c1':'#e8ece6'}">${CLS[k].toLowerCase()}</div>`),wav(q.x,900,130,{heat:q.up,labels:k===2})],20))});fit(i)}
+
+const SC=[s0,s1,s2,s3,s4,s5,s6,s7,s8];
+function explain(){const s=S.step,c=CLS[S.cls].toLowerCase();let p='';
+ if(s===0)p='The whole method on one screen. Step through to see each part; the class being explained is '+c+'.';
+ if(s===1)p='Each strided conv layer looks at a short window of its input. The first uses four band filters and pools every 16 samples, so time shrinks from 1024 to 64 while channels grow from 1 to 4. The second mixes those 4 channels over 13 neighbouring steps into 6 detectors. The highlight shows the input span behind one output step; Grad-CAM can never be sharper than this.';
+ if(s===2)p='The head pools each channel over time (mean of squares here, so gradients vary with t) and a linear layer maps the 6 pooled numbers to 3 logits. Grad-CAM starts from the logit of the chosen class, not its softmax probability.';
+ if(s===3)p='Backpropagate y of '+c+' to the last conv activations. Each gradient cell says how much the logit would change if that channel fired more at that step: green raises it, coral lowers it.';
+ if(s===4){const k=R.al.indexOf(Math.max(...R.al)),q=R.al.indexOf(Math.min(...R.al));p=`Average each gradient row over time to get one weight per channel. For ${c}, the ${MAPS[k]} channel carries the most weight (${f3(R.al[k])}) and the ${MAPS[q]} channel argues hardest against it (${f3(R.al[q])}).`}
+ if(s===5)p='Scale each channel by its weight and add them up. Channels with negative weight dig coral troughs wherever they fire, usually on events that belong to other classes.';
+ if(s===6)p=`Clip the negative part. What remains is time steps whose activity supports ${c}; ${R.S.filter(v=>v<0).length} of 64 steps are set to zero.`;
+ if(s===7)p=R.Lm>0?'Linear interpolation stretches the 64 step values back over the 1024 samples, the curve is divided by its maximum so it runs from 0 to 1, and the result shades the input waveform. Resolution stays at one step, 16 samples: interpolation smooths the map but adds no detail.':'The map is empty after the ReLU, so there is nothing to upsample.';
+ if(s===8)p='Same waveform, same forward pass, three different logits to differentiate. Each class lights up a different time span. Untick an event to see Grad-CAM still highlight something for its class: the map is normalised by its own maximum, so check the logit first.';
+ $('sp').textContent=p}
+function render(){stopAnims();clearInterval(timer);timer=null;setT=null;stage.innerHTML='';const s=S.step;
+ at(el('div','st-t',STEPS[s][0]),32,22);at(el('div','st-s',STEPS[s][1]),32,58);
+ const play=SC[s]();explain();$('stn').textContent=`${s} / 8`;$('st').value=s;$('play').hidden=!(s>=1&&s<=7)||RM;$('play').textContent=S.play?'pause animation':'play animation';
+ if(typeof play==='function'){const loop=()=>{const d=play();if(!STILL())loopT=setTimeout(loop,d+1600)};loop()}
+ if(s===1&&S.play)timer=setInterval(()=>setT&&setT((S.t+1)%T),160)}
+function update(){R=compute(S.cls,S.ev);$('lg').innerHTML='logits '+CLS.map((n,k)=>k===S.cls?`<b>${n.toLowerCase()} ${R.y[k].toFixed(2)}</b>`:`${n.toLowerCase()} ${R.y[k].toFixed(2)}`).join(' · ');render()}
+function go(s){S.step=Math.max(0,Math.min(8,s));render()}
+let scale=1;
+function resize(){const w=$('wrap').clientWidth;scale=Math.max(.55,Math.min(1.15,w/DW));stage.style.transform=`scale(${scale})`;$('sizer').style.width=DW*scale+'px';$('sizer').style.height=DH*scale+'px';$('hint').hidden=DW*scale<=w+1}
+CLS.forEach((n,k)=>{const l=document.createElement('label');l.innerHTML=`<input type="radio" name="cls" id="cls-${k}" value="${k}"${k===S.cls?' checked':''}> ${n.toLowerCase()}`;$('cls').appendChild(l)});
+EV.forEach((e,k)=>{const l=document.createElement('label');l.innerHTML=`<input type="checkbox" id="ev-${k}" checked> ${e.n.toLowerCase()}`;$('evs').appendChild(l)});
+$('cls').addEventListener('change',e=>{S.cls=+e.target.value;update()});
+$('evs').addEventListener('change',e=>{S.ev[+e.target.id.split('-')[1]]=e.target.checked?1:0;update()});
+$('st').addEventListener('input',e=>go(+e.target.value));
+$('prev').addEventListener('click',()=>go(S.step-1));$('next').addEventListener('click',()=>go(S.step+1));
+$('play').addEventListener('click',()=>{S.play=!S.play;render()});
+stage.addEventListener('pointermove',e=>{if(!setT)return;const r=stage.getBoundingClientRect(),xx=(e.clientX-r.left)/scale;if(xx<232||xx>1028)return;if(S.play){S.play=false;clearInterval(timer);timer=null;$('play').textContent='play animation'}setT(Math.min(T-1,Math.floor((xx-232)/796*T)))});
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type==='range')return;if(e.key==='ArrowRight')go(S.step+1);if(e.key==='ArrowLeft')go(S.step-1)});
+addEventListener('resize',resize);
+resize();update();
+})();
+</script>
+</body>
+</html>

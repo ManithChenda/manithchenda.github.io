@@ -1,7 +1,7 @@
 # Migrated verbatim from reference/strings.js (window.SITE.vizzes)
 #
 # `kind` selects the inline SVG glyph shown in the tile preview:
-#   wave | spectro | harmo | lstm | conv
+#   wave | spectro | harmo | lstm | conv | saliency
 # An unrecognised value renders an empty preview area, not an error.
 
 
@@ -34,3 +34,13 @@
   km:
     title: "convolution_sliding"
     desc: "ដំណើរការនៃការអូស convolution លើវ៉ិចទ័រនិងម៉ាទ្រីស"
+
+- href: "/viz/grad_cam_1d.html"
+  kind: "saliency"
+  en:
+    title: "grad_cam_1d"
+    desc: "Process of applying Grad-CAM on waveforms"
+
+  km:
+    title: "grad_cam_1d"
+    desc: "ជំហ៊ាននៃការប្រើ Grad-CAM លើរលកសញ្ញា"
